@@ -6,7 +6,7 @@
 
 The application being developed will utilize the de-facto network protocol tool for testing network speeds between a client and a server.
 
-The application will only be implementing the client-side functionality of iPerf3, it is assumed that an iPerf3 server is running on another accessible via the Android client.
+* **Note**: The application will only be implementing the client-side functionality of iPerf3, it is assumed that an iPerf3 server is running on another accessible via the Android client.
 
 
 ## More details
@@ -30,9 +30,9 @@ The application will only be implementing the client-side functionality of iPerf
 
 ### Related Work
 * I have developed a Java text-based console program that runs the iPerf3 native executable in the background, and provides performance details in a asyncronous manner.
-* Here are a few samples:
 
-* Startup
+* Here are a few samples:
+#### Startup
 ```
  newTestBandWidth.sh pve -R
 
@@ -43,7 +43,7 @@ Running: [      *
 
 ```
 
-* Completion
+#### Completion
 ```
 [Sun Mar 15 21:33:48 EDT 2026]               Executing:
 iperf3 command-line:
@@ -64,15 +64,57 @@ Return Code: 000 [Avg=2.33 Gbits/sec]
 
 ### Similar Applications
 There are a few implementations of this tool on the Android play store.
-These are listed below:
-1. Analti
-2. iperf3NamedSomething
 
+#### These are listed below:
+| App | Description                  | Play Store Link                                                                              |
+|---|------------------------------|----------------------------------------------------------------------------------------------|
+| Analti | *analiti Networking Experts* | [link](https://play.google.com/store/apps/details?id=com.analiti.fastest.android) 
+| iperf3 | *Uncle Tools*                | [link](https://play.google.com/store/search?q=iperf3&c=apps)                      |
 
-## Requirement Analysis and Testing 
+#### There is an iOS application that has some similarities to my project deliverable, but it has not been ported to Android.
+* I will be using this opportunity to develop a Mobile Android application with similar options but a cleaner<br> user interface with some of the options from my<br> 
+*`     newTestBandWidth.sh`*<br> application.
 
-*(This section should clearly describe all features/requirements that you __plan to implement or have implemented__ for your application. You should separate them into three categories: essential, desirable and optional.
- 
+---
+## Requirement Analysis and Testing
+### Requirement 1
+
+| Title                                                                                 | prototype of remote IP connection (**ESSENTIAL**)                                                                           |
+|---------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| Description                                                                           | A hard-coded remote IP address will be used as the remote iPerf3 server                                                     |
+| Acceptance Tests                                                                      | runs a fixed loop of 10 iperf3 intervals over TCP/IP                                                                        |
+| Test Results                                                                          | `[Avg]             2.33  Gbits/sec`                                                                                         |
+| Mockup                                                                                | Text based output ──→ `iperf3 -c 172.236.101.251: local 192.168.1.10 connected to 172.236.101.251 ─→ Result: 940 Mbits/sec` |
+| Status                                                                                | Iteration 1 - Perform a simple ping to remote host<br> Iteration 2 (or possibly 3) - perform a single iperf3 test (count=1) |
+---
+### Requirement 2
+|Title<br> | Client side host/ip address entry (*ESSENTIAL*)                                                                                              |
+|---|----------------------------------------------------------------------------------------------------------------------------------------------|
+|Description| The user shall be able to type in a host/ip address                                                                                          |
+|Mockups| [png](Uncle-Tools-iperf3-grab2.png)                                                                                                          |
+|Acceptance Tests| host-name/IP Address validation                                                                                                              |
+|Test Results| Positive Test: "`google.com`" **Test runs**<br>Negative Test: "`abcd.baddomain`" *Validation error*                                          |
+|Status| Iteration 1 - Allow entry of any text<br>Iteration 2 - Validate remote host<br>Iteration 3 - perform iperf3 test with hard-coded-count of 10 |
+---
+### Requirement 3
+| Title  | Input desired count of iperf3 loops (*ESSENTIAL*)                                                                           |
+|------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| Description                                    | The user shall be able enter a test count (i.e. 10 seconds)                                                                 |
+| Mockups                                        | [png](Uncle-Tools-iperf3-grab2.png)                                                                                         |
+| Acceptance Tests                               | Test count entry validation                                                                                                 |
+| Test Results                                   | Postive: Enter `  10` - test runs for 10 iterations, Negative: Enter `  -1` - input validation fails with **error message** |                                                                                                                            |
+| Status                                         | Iteration 1 - User Interface allows manual keyboard entry of count<br>Iteration 3 - iperf3 runs for specified count         |
+---
+### Requirement 4
+|Title | Unit of measurement                                                                                                                    |
+|---|----------------------------------------------------------------------------------------------------------------------------------------|
+|Description| The user shall be able to specify the unit of measurement for output bandwidths                                                        |
+|Mockups| Entry of `MB`, Entry of `gb`, Entry of `bytes`                                                                                         |
+|Acceptance Tests| Validate rationale unit text                                                                                                           |
+|Test Results| Positive: ` MB`, Negative ` foobar`                                                                                                    |
+|Status| Iteration 1 - Allow keyboard entry of unit<br>Iteration 2 - validate unit of measurement<br>Normalize output results to specified unit |
+---
+### Requirement 5
 |Title<br>(Essential/Desirable/Optional) |  |
 |---|---|
 |Description|  |
@@ -81,23 +123,16 @@ These are listed below:
 |Test Results| |
 |Status| |
 
-For example: 
-
-|Title(Essential/Desirable/Optional)<br> |View project details (Essential)|
-|---|---|
-|Description|As a user, I want to view the details of a project so that I can have a better idea about that project.  |
-|Mockups|You can put one or more mockups here. |
-|Acceptance Tests|Given a project list is shown on the screen, <br> When the user clicks on one project on the list, <br>Then the project details will be displayed on the screen, including project title, brief description, implementation stack, authors, keywords, project links, etc.|
-|Test Results| You shall provide some screenshots of the execution result.|
-|Status|Iteration 1: implemented the project detail UI page <br> Iteration 2: Implemented User click event<br> Iteration 3: Implemented project database. Completed. |)* 
-
-
-*(In Iteration 0 (project planning phase), this section should contain most essential features, some desirable features and possibly a few optional features if you want. Each feature listed in this section should have a title and a brief description, preferably using the user story template “As (a role)… I want (some feature), so that (value)...” . Each essential feature should also have at least one acceptance test, and one or multiple mockups if applicable.)*
-
-*(In later iterations (iteration 1 to 3), this section should be updated to reflect your progress. In particular, make sure to __update the status row__ of each requirement. __Highlight each feature/requirement that you work on in the current iteration__, you should also provide some test results if it is completed or partially completed.)*
-
 
 ## Design and Implementation
+
+I utilized the new Claude.ai capability for render of diagrams without the need for Canvas, PlantUML, or other tools.
+
+### Layered architecture — the app is organized into four tiers from UI down to the native iperf3 binary:
+* [svg](android_iperf3_architecture.svg)
+
+### Test execution flow — what happens when the user taps "Run test":
+* [svg](iperf3_test_execution_flow.svg)
 
 *(This section should describe the basic architecture (e.g. MVC, or MVVM) and your detailed design and implementation.  This section may contain the following aspects:
 - Basic architecture
