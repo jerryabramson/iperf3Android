@@ -3,8 +3,7 @@
  - **Jerold (Jerry) Abramson**
 
 # Project Assignment Submission
-* [Jerry Abramson's GitHub Link Project Doc](https://github.com/CS683/project-jerryabramson/Doc/README.md)
-* [Jerry Abramson's GitHub Link Project Code](https://github.com/CS683/project-jerryabramson/Code/README.md)
+* [Jerry Abramson's GitHub Link Project Code](../Code/README.md)
 
 
 ## Overview 
