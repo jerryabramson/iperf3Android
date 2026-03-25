@@ -2,6 +2,11 @@
 
  - **Jerold (Jerry) Abramson**
 
+# Project Assignment Submission
+* [Jerry Abramson's GitHub Link Project Doc](https://github.com/CS683/project-jerryabramson/Doc/README.md)
+* [Jerry Abramson's GitHub Link Project Code](https://github.com/CS683/project-jerryabramson/Code/README.md)
+
+
 ## Overview 
 
 The application being developed will utilize the de-facto network protocol tool for testing network speeds between a client and a server.
@@ -91,7 +96,7 @@ There are a few implementations of this tool on the Android play store.
 |Title<br> | Client side host/ip address entry (*ESSENTIAL*)                                                                                              |
 |---|----------------------------------------------------------------------------------------------------------------------------------------------|
 |Description| The user shall be able to type in a host/ip address                                                                                          |
-|Mockups| [png](Uncle-Tools-iperf3-grab2.png)                                                                                                          |
+|Mockups| [png](images/Uncle-Tools-iperf3-grab2.png)                                                                                                          |
 |Acceptance Tests| host-name/IP Address validation                                                                                                              |
 |Test Results| Positive Test: "`google.com`" **Test runs**<br>Negative Test: "`abcd.baddomain`" *Validation error*                                          |
 |Status| Iteration 1 - Allow entry of any text<br>Iteration 2 - Validate remote host<br>Iteration 3 - perform iperf3 test with hard-coded-count of 10 |
@@ -100,7 +105,7 @@ There are a few implementations of this tool on the Android play store.
 | Title  | Input desired count of iperf3 loops (*ESSENTIAL*)                                                                           |
 |------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
 | Description                                    | The user shall be able enter a test count (i.e. 10 seconds)                                                                 |
-| Mockups                                        | [png](Uncle-Tools-iperf3-grab2.png)                                                                                         |
+| Mockups                                        | [png](images/Uncle-Tools-iperf3-grab2.png)                                                                                         |
 | Acceptance Tests                               | Test count entry validation                                                                                                 |
 | Test Results                                   | Postive: Enter `  10` - test runs for 10 iterations, Negative: Enter `  -1` - input validation fails with **error message** |                                                                                                                            |
 | Status                                         | Iteration 1 - User Interface allows manual keyboard entry of count<br>Iteration 3 - iperf3 runs for specified count         |
@@ -129,10 +134,10 @@ There are a few implementations of this tool on the Android play store.
 I utilized the new Claude.ai capability for render of diagrams without the need for Canvas, PlantUML, or other tools.
 
 ### Layered architecture — the app is organized into four tiers from UI down to the native iperf3 binary:
-* [svg](android_iperf3_architecture.svg)
+* [svg](images/android_iperf3_architecture.svg)
 
 ### Test execution flow — what happens when the user taps "Run test":
-* [svg](iperf3_test_execution_flow.svg)
+* [svg](images/iperf3_test_execution_flow.svg)
 
 *(This section should describe the basic architecture (e.g. MVC, or MVVM) and your detailed design and implementation.  This section may contain the following aspects:
 - Basic architecture
