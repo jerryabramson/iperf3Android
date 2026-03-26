@@ -23,3 +23,8 @@ Doc/
 # Project Code
 * [iPerf3 Network Performance Measurement Tool](../Code/README.md)
 
+## References
+In order to utilize this application, a suitable version of the iperf3 binary executable for Android is required.
+
+I have provided a small script for this purpose, but the best approach is to follow the instructions here:
+* https://github.com/davidBar-On/android-iperf3/
