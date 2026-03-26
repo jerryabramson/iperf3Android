@@ -20,5 +20,6 @@ Doc/
 ```
 * [More Details available here](CS683_JerryAbramson_Iperf3_network_tester.md)
 
-# Project Assignment Submission
-* [Jerry Abramson's GitHub Link Project Code](../Code/README.md)
+# Project Code
+* [iPerf3 Network Performance Measurement Tool](../Code/README.md)
+
