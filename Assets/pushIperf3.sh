@@ -12,7 +12,7 @@ if [[ ! -f $EXEC ]]; then
        else 
           which curl; RC=$?
           if [[ $RC -eq 0 ]]; then 
-	      curl $URL -l $EXEC
+              curl  -O "$URL" -L
           else
               printf "No suitable command-line tool available, download manually from\n"
               printf "$URL"
