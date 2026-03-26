@@ -184,5 +184,9 @@ This section is optional, and you can include this section in the final iteratio
 
 
 ## References
+In order to utilize this application, a suitable version of the iperf3 binary executable for Android is required.
+
+I have provided a small script for this purpose, but the best approach is to follow the instructions here:
+https://github.com/davidBar-On/android-iperf3/
 
 *(Please list all your references here)*
