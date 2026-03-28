@@ -70,7 +70,7 @@ adb devices
 # 7 Install iperf3 onto either the emulator or the real device
 
 ```
-cd ../Assets
+cd ../../Assets
 ./pushIperf3.sh
 ```
 
@@ -84,7 +84,7 @@ adb shell ls -ls /bin/iperf3
 # 8 Install & Run the APK on the Device
 
 ```bash
-cd ../Code
+cd ../../Code
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 # -r  = replace existing installation (useful for rapid iteration)
 ```
