@@ -20,7 +20,11 @@ sdkmanager --update
 # 3 Generate the Gradle Wrapper
 
 ```bash
-gradle wrapper --gradle-version 9.3.1 --distribution-type all
+gradle wrapper \
+       --gradle-version 9.3.1  \
+       --distribution-type all \
+       --gradle-distribution-sha256-sum b266d5ff6b90eada6dc3b20cb090e3731302e553a27c5d3e4df1f0d76beaff06
+
 ```
 
 This creates `gradlew`, `gradlew.bat`, and the `gradle/wrapper` folder.
