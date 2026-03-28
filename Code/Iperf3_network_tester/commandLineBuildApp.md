@@ -23,7 +23,7 @@ sdkmanager --update
 gradle wrapper \
        --gradle-version 9.3.1  \
        --distribution-type all \
-       --gradle-distribution-sha256-sum b266d5ff6b90eada6dc3b20cb090e3731302e553a27c5d3e4df1f0d76beaff06
+       --gradle-distribution-sha256-sum 17f277867f6914d61b1aa02efab1ba7bb439ad652ca485cd8ca6842fccec6e43
 
 ```
 
