@@ -1,18 +1,45 @@
 All code should be stored in this folder.
 
-# Source Code Map
-
 ## Top Level
 ```
-Iperf3_network_tester/
-    ├── app/
-    ├── build.gradle.kts
-    ├── gradle/
-    ├── gradle.properties
-    ├── gradlew*
-    ├── gradlew.bat
-    ├── local.properties
-    └── settings.gradle.kts
+.
+├── AGENTS.md
+├── app
+├── build.gradle.kts
+├── commandLineBuildApp.md
+├── gradle
+├── gradle.properties
+├── gradlew
+├── gradlew.bat
+├── local.properties
+├── README.md
+└── settings.gradle.kts
+```
+
+# Source Code Map
+```
+app/src/main/java
+└── edu
+    └── bu
+        └── cs683_jabramson_project
+            └── iperf3_network_tester
+                ├── MainActivity.kt
+                ├── model
+                ├── RunIperf3Screen.kt
+                ├── StubbedIperf3Screen.kt
+                ├── ui
+                │   └── theme
+                │       ├── Color.kt
+                │       ├── Theme.kt
+                │       └── Type.kt
+                ├── utils
+                │   └── Iperf3Runner.kt
+                ├── view
+                │   └── ProcessOutputScreen.kt
+                └── viewmodel
+                    └── ProcessRunnerViewModel.kt
+
+11 directories, 9 files
 ```
 ## Code Level
 ```
