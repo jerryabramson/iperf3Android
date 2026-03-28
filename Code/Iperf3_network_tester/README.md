@@ -1,8 +1,5 @@
 All code should be stored in this folder.
 
-# Build instructions
-[Command Line Help](Iperf3_network_tester/commandLineBuildApp.md)
-
 # Source Code Map
 
 ## Top Level
