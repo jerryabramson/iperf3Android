@@ -3,23 +3,32 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+
 android {
-    namespace = "edu.bu.cs683_jabramson_project.iperf3_network_tester"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "edu.bu.cs683_jabramson_project.iperf3_network_tester"
-        minSdk = 24
+        namespace = "edu.bu.cs683_jabramson_project.iperf3_network_tester"
+        minSdk = 23
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Move abiFilters inside ndk block
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
     }
+
+    // Replace aaptOptions with androidResources
+    androidResources {
+        // Use property instead of function
+        noCompress += "iperf3"
+    }
+
+    // ... rest of your android configuration (buildFeatures, compileOptions, etc.) ...
+
 
     buildTypes {
         release {
@@ -55,4 +64,5 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    implementation(libs.androidx.lifecycle.viewmodel.compose.android)
 }
