@@ -25,9 +25,8 @@ class MainActivity : ComponentActivity() {
         setContent {
 
             //StubbedIperf3Screen()
-
-            ProcessOutputScreen()
-            //RunIperf3Screen()
+            //ProcessOutputScreen()
+            RunIperf3Screen()
         }
     }
 }

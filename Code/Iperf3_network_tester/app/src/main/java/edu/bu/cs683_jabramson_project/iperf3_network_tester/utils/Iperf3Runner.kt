@@ -122,12 +122,12 @@ suspend fun iperf3Runner(
 }
 fun addLine(line: String, newLine: MutableList<String>) {
     newLine.add(line)
-    Log.d("Iperf3Runner: Adding line: ", (line ?: "null"))
+    Log.d("Iperf3Runner: ", "stdout: $line")
 }
 
 fun addError(line: String, newLine: MutableList<String>) {
     newLine.add(line)
-    Log.d("Iperf3Runner: Adding error: ", (line ?: "null"))
+    Log.d("Iperf3Runner: ", "stderr: $line")
 }
 
 /**

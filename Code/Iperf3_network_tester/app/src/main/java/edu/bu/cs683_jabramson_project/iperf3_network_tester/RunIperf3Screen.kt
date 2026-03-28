@@ -4,9 +4,11 @@ package edu.bu.cs683_jabramson_project.iperf3_network_tester
 import android.Manifest
 
 import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,6 +24,7 @@ import kotlinx.coroutines.launch
 
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RunIperf3Screen() {
