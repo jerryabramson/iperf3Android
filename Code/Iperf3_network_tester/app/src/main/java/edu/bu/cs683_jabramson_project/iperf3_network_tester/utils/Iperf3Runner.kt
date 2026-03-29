@@ -67,24 +67,28 @@ suspend fun iperf3Runner(
         }
     }
 
-    var lineCount: Int = 0
     val extraLines: Float = (durationSec.toFloat() * 1) + 5
 
 
+    var intervalCount = 0
+    var started = false
     // Launch two coroutines: one for stdout, one for stderr
     val stdoutJob = launch {
         readStream(process.inputStream) { line ->
             addLine(line, outputLines)
-            lineCount++
-            updateProgress(lineCount.toFloat() / extraLines)
+            if (line.contains("Interval") && !started) {
+                started = true
+                intervalCount = 0
+            } else if (line.contains("[") && line.contains("]")) {
+                if (started) intervalCount++
+            }
+            updateProgress(intervalCount.toFloat() / 10)
         }
     }
 
     val stderrJob = launch {
         readStream(process.errorStream) { err ->
             addError(err,  outputLines)
-            lineCount++
-            updateProgress(lineCount.toFloat() / extraLines)
         }
     }
 

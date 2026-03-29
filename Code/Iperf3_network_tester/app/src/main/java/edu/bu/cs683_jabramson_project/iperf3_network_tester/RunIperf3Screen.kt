@@ -3,6 +3,7 @@ package edu.bu.cs683_jabramson_project.iperf3_network_tester
 
 import android.Manifest
 import android.R.attr.progress
+import android.content.Context
 
 import android.content.pm.PackageManager
 import androidx.compose.ui.graphics.Color
@@ -13,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
@@ -25,6 +27,10 @@ import androidx.compose.ui.graphics.vector.VectorProperty
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.material3.LinearProgressIndicator
+
 
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -57,8 +63,8 @@ fun RunIperf3Screen(iperf3Binary: File) {
     val mesloMonoStyle = TextStyle(
         fontFamily = mesloFontFamily(),
         fontSize = 10.sp,
-        letterSpacing = 0.2.sp)   // optional tweak for monospace readability
-
+        letterSpacing = 0.2.sp
+    )   // optional tweak for monospace readability
 
 
     // -------------------------------------------------------------------------
@@ -82,11 +88,13 @@ fun RunIperf3Screen(iperf3Binary: File) {
     // -------------------------------------------------------------------------
     // UI State
     // -------------------------------------------------------------------------
-    var output by remember { mutableStateOf<String?>(null) }
+    var hostName by remember { mutableStateOf("") }
+    var hostNameEntry by remember { mutableStateOf("") }
     var isRunning by remember { mutableStateOf(false) }
     var isFinished by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var numSeconds by remember { mutableFloatStateOf(0f) }
     var currentProgress by remember { mutableFloatStateOf(0f) }
+
     var returnCode by remember { mutableIntStateOf(0) }
     var outputLines by remember { mutableStateOf(emptyList<String>().toMutableList()) }
 
@@ -108,69 +116,119 @@ fun RunIperf3Screen(iperf3Binary: File) {
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            // -------------------------------------------------------------
-            // Button to start the test
-            // -------------------------------------------------------------
-            Button(
-                //    modifier = Modifier.fillMaxWidth(),
-                onClick = {
-                    if (!hasInternetPermission) {
-                        // Request permission and abort launching the test
-                        requestPermissionLauncher.launch(Manifest.permission.INTERNET)
-                        return@Button
-                    }
-                    isFinished = false
-                    isRunning = true
-                    coroutineScope.launch {
-                        returnCode = iperf3Runner(
-                            { progress ->
-                                currentProgress = progress
-                            },
-                            iperf3Binary,
-                            "192.168.1.28",
-                            10,
-                            outputLines
-                        )
-                        isRunning = false
-                        isFinished = true
 
-                    }
-                }, enabled = !isRunning
-            ) {
-                Text("Run iperf‑3 Test")
+            val prompt = "Host Name or IP Address"
+
+            Row(
+                //modifier = Modifier.fillMaxWidth().padding(dimensionResource(id = R.dimen.common_padding)),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .padding(dimensionResource(id = R.dimen.common_padding))
+                    .fillMaxWidth(),
+
+                ) {
+                TextField(
+                    value = hostNameEntry,
+                    onValueChange = { hostNameEntry = it },
+                    enabled = !isRunning,
+                    placeholder = { Text("jabramson.com") },
+                    modifier = Modifier
+                        .width(260.dp)
+                        .padding(end = 16.dp),
+                    label = { Text(prompt) },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                        unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                        errorIndicatorColor = MaterialTheme.colorScheme.error,
+                        errorLabelColor = MaterialTheme.colorScheme.error,
+                        errorTextColor = MaterialTheme.colorScheme.error
+                    ),
+                    singleLine = true
+                )
+
+
+                // -------------------------------------------------------------
+                // Button to start the test
+                // -------------------------------------------------------------
+                Button(
+                    //    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        if (!hasInternetPermission) {
+                            // Request permission and abort launching the test
+                            requestPermissionLauncher.launch(Manifest.permission.INTERNET)
+                            return@Button
+                        }
+                        hostName = hostNameEntry
+                        hostNameEntry = ""
+                        isFinished = false
+                        isRunning = true
+                        coroutineScope.launch {
+                            returnCode = iperf3Runner(
+                                { progress ->
+                                    currentProgress = progress
+                                },
+                                iperf3Binary,
+                                hostName,
+                                10,
+                                outputLines
+                            )
+                            isRunning = false
+                            isFinished = true
+
+                        }
+                    }, enabled = !isRunning
+                ) {
+                    Text("Run")
+                }
             }
-
             Spacer(modifier = Modifier.height(24.dp))
             if (isRunning) {
-                Text(
-                    "Testing… (this may take a few seconds)",
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .fillMaxWidth()
-                )
 
-                LinearProgressIndicator(
-                    progress =  currentProgress,
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                )
-                Text(currentProgress.toString(), modifier = Modifier.padding(8.dp))
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Testing for 10 seconds against remote host $hostName",
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .fillMaxWidth()
+                    )
+
+                    LinearProgressIndicator(
+                        progress = { currentProgress },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        strokeCap = ProgressIndicatorDefaults.LinearStrokeCap,
+                    )
+                    numSeconds = currentProgress * 10
+                    Text(
+                        "${numSeconds.toInt()} seconds elapsed",
+                        modifier = Modifier.padding(8.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
 
             } else if (isFinished) {
                 Column(Modifier.fillMaxWidth()) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("return Code: $returnCode")
-                        Text(text = "iperf3 Output")
-                    }
+                    Text("return Code: $returnCode",
+                        modifier = Modifier.padding(8.dp),
+                        textAlign = TextAlign.Left,
+                        fontSize = 18.sp)
                     HorizontalDivider(
                         Modifier
                             .fillMaxWidth()
-                            .padding(10.dp),
-                        thickness = 12.dp,
+                            .padding(2.dp),
+                        thickness = 4.dp,
                         color = Color.DarkGray
                     )
                 }
+                currentProgress = 0f
 
                 for (index in 0 until outputLines.size) {
                     var line: String = outputLines.get(index)
@@ -180,7 +238,7 @@ fun RunIperf3Screen(iperf3Binary: File) {
                             style = SpanStyle(
                                 color = Color.Blue,
                                 fontFamily = mesloFontFamily(),
-                                fontSize = 10.sp,
+                                fontSize = 11.sp,
                                 fontStyle = FontStyle.Normal
                             )
                         ) {
@@ -198,27 +256,11 @@ fun RunIperf3Screen(iperf3Binary: File) {
                         )
                     }
                 }
+                outputLines.clear()
             }
-
-
-
-
-            errorMessage?.let { msg ->
-                Text(
-                    "Error: $msg",
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(8.dp)
-                )
-            }
-            output = null
-            errorMessage = null
         }
-
     }
 }
-
-
-
 
 
 
