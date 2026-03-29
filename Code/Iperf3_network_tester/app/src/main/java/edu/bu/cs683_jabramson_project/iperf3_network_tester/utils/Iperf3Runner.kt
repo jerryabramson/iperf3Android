@@ -44,6 +44,8 @@ suspend fun iperf3Runner(
         "-c", serverHost,
         "-R",
         "--forceflush",
+        "--connect-timeout",
+        "3000",
         "-t", durationSec.toString())
         .redirectError(ProcessBuilder.Redirect.PIPE)
         .redirectOutput(ProcessBuilder.Redirect.PIPE)

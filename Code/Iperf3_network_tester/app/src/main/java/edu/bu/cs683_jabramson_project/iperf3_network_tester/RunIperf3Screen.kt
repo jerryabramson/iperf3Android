@@ -165,6 +165,7 @@ fun RunIperf3Screen(iperf3Binary: File) {
                             requestPermissionLauncher.launch(Manifest.permission.INTERNET)
                             return@Button
                         }
+                        if (hostNameEntry.isEmpty()) hostNameEntry = "jabramson.com"
                         hostName = hostNameEntry
                         hostNameEntry = ""
                         isFinished = false
