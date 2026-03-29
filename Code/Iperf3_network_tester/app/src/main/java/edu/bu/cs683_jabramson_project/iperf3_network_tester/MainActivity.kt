@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -14,7 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme.Iperf3NetworkTesterTheme
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.findIperf3Binary
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.view.ProcessOutputScreen
+import java.io.File
 
 
 class MainActivity : ComponentActivity() {
@@ -24,9 +27,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
 
-            //StubbedIperf3Screen()
+            val context = LocalContext.current
+            var iperfBinary: File? = findIperf3Binary(context)
+            if (iperfBinary == null) {
+                StubbedIperf3Screen()
+            } else {
+                RunIperf3Screen(iperfBinary)
+            }
             //ProcessOutputScreen()
-            RunIperf3Screen()
         }
     }
 }

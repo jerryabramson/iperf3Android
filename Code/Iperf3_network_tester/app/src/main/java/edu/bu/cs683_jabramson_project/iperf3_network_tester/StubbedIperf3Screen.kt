@@ -31,7 +31,7 @@ fun StubbedIperf3Screen() {
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("iperf‑3 Test") })
+            TopAppBar(title = { Text("iperf‑3 Stubbed Test, Cannot find iperf3 binary!") })
         }
     ) { padding ->
         Column(

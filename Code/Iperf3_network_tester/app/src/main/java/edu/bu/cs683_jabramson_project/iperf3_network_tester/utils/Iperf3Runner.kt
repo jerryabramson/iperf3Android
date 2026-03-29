@@ -31,34 +31,12 @@ import java.io.InputStreamReader
 @RequiresApi(Build.VERSION_CODES.O)
 suspend fun iperf3Runner(
     updateProgress: (Float) -> Unit,
-    context: Context,
+    iperfBinary: File,
     serverHost: String,
     durationSec: Int = 10,
     outputLines: MutableList<String>
 ): Int = withContext(Dispatchers.IO) {
-    // -----------------------------------------------------------
-    // 1️⃣ Resolve the binary location: <app‑files-dir>/jniLibs/<abi>/iperf3
-    // -----------------------------------------------------------
-    val abi = chooseAbi(context)
-    val libDir = File(context.filesDir, "jniLibs/$abi")
-    var iperfBinary = File(libDir, "iperf3")
-
-    if (!iperfBinary.exists()) {
-        // Fall back to the one I manually installed
-        iperfBinary = File("/bin/iperf3")
-    }
-    println("iperf3 binary: $iperfBinary")
-    // -----------------------------------------------------------
-    // 2️⃣ Verify existence and make it executable (chmod 755)
-    // -----------------------------------------------------------
-    require(iperfBinary.exists()) {
-        "iperf3 binary not found at $iperfBinary"
-    }
-    iperfBinary.setExecutable(true, false)   // <-- equivalent to chmod 755
-
-    // -----------------------------------------------------------
-    // 3️⃣ Build the command line (reverse test, -R)
-    // -----------------------------------------------------------
+    Log.d("Iperf3Runner", "iperf3 binary $iperfBinary")
     val command = iperfBinary.absolutePath
 
     val processBuilder = ProcessBuilder(
@@ -114,7 +92,7 @@ suspend fun iperf3Runner(
     stdoutJob.join()
     stderrJob.join()
 
-    updateProgress(1f)
+    updateProgress((1.0.toFloat()))
     return@withContext exitValue
     //val output = process.inputStream.bufferedReader().readText()
 
@@ -130,14 +108,5 @@ fun addError(line: String, newLine: MutableList<String>) {
     Log.d("Iperf3Runner: ", "stderr: $line")
 }
 
-/**
- * Utility – pick the first ABI that matches a folder we have under jniLibs/.
- * Adjust the order if you want a different priority.
- */
-private fun chooseAbi(context: Context): String {
-    val abiList = Build.SUPPORTED_ABIS
-    return listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-        .firstOrNull { abiList.contains(it) } ?: "arm64-v8a"
-}
 
 
