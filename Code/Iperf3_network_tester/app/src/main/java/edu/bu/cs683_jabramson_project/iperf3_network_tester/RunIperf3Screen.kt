@@ -123,7 +123,7 @@ fun RunIperf3Screen(iperf3Binary: File) {
                 //modifier = Modifier.fillMaxWidth().padding(dimensionResource(id = R.dimen.common_padding)),
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .padding(dimensionResource(id = R.dimen.common_padding))
+                    .padding(8.dp)
                     .fillMaxWidth(),
 
                 ) {
@@ -158,7 +158,7 @@ fun RunIperf3Screen(iperf3Binary: File) {
                 // Button to start the test
                 // -------------------------------------------------------------
                 Button(
-                    //    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         if (!hasInternetPermission) {
                             // Request permission and abort launching the test
