@@ -14,14 +14,14 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 
 /**
- * Runs the native iperf3 binary that lives under
- * `src/main/jniLibs/<abi>/iperf3`.
+ * Runs the native iperf3 binary that is extracted from app assets to the app's
+ * private files directory.
  *
  * This is a **suspending** function so it can be called from Compose
  * without blocking the UI thread.
  *
  * @param context   Any Android Context (usually an Activity or Application)
-  * @param serverHost Hostname or IP of the iperf3 server
+ * @param serverHost Hostname or IP of the iperf3 server
  * @param durationSec Test length in seconds (default = 10)
  * @return Raw stdout of the iperf3 process
  * @throws Exception if the binary cannot be found, executed, or the process fails
@@ -55,7 +55,6 @@ suspend fun iperf3Runner(
     // 4️⃣ Launch, capture output, wait for termination
     // -----------------------------------------------------------
     val process = processBuilder.start()
-
 
 
 
@@ -113,6 +112,3 @@ fun addError(line: String, newLine: MutableList<String>) {
     newLine.add(line)
     Log.d("Iperf3Runner: ", "stderr: $line")
 }
-
-
-

@@ -21,9 +21,15 @@ android {
         }
     }
 
-    // Replace aaptOptions with androidResources
-    androidResources {
-        // Use property instead of function
+    // Native library packaging
+    packaging {
+        jniLibs {
+            pickFirsts += listOf("armeabi-v7a/libc++_shared.so", "arm64-v8a/libc++_shared.so", "x86/libc++_shared.so", "x86_64/libc++_shared.so")
+        }
+    }
+    
+    // Prevent compression of iperf3 binaries in assets
+    aaptOptions {
         noCompress += "iperf3"
     }
 
