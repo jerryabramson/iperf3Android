@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
@@ -97,6 +98,13 @@ fun RunIperf3Screen(iperf3Binary: File) {
 
     var returnCode by remember { mutableIntStateOf(0) }
     var outputLines by remember { mutableStateOf(emptyList<String>().toMutableList()) }
+    var latestLine by remember { mutableStateOf("") }
+    fun outputIt(line: String) {
+        outputLines.add(line)
+        latestLine = line
+        Log.d("Iperf3Runner: ", "stdout: $line")
+    }
+
 
     // -------------------------------------------------------------------------
     // Helper to pick the ABI (you could expose a dropdown instead)
@@ -175,6 +183,7 @@ fun RunIperf3Screen(iperf3Binary: File) {
                                 { progress ->
                                     currentProgress = progress
                                 },
+                                ::outputIt,
                                 iperf3Binary,
                                 hostName,
                                 10,
@@ -192,7 +201,10 @@ fun RunIperf3Screen(iperf3Binary: File) {
             Spacer(modifier = Modifier.height(24.dp))
             if (isRunning) {
 
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
                         "Testing for 10 seconds against remote host $hostName",
                         modifier = Modifier
@@ -213,9 +225,22 @@ fun RunIperf3Screen(iperf3Binary: File) {
                         modifier = Modifier.padding(8.dp),
                         textAlign = TextAlign.Center
                     )
-                }
+                    // Show the accumulated lines in a lazy list
 
-            } else if (isFinished) {
+                    Text("Results")
+                    Column(Modifier.fillMaxWidth()
+                        .padding(8.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = latestLine,
+                                textAlign = TextAlign.Left,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+            } else {
                 Column(Modifier.fillMaxWidth()) {
                     Text("return Code: $returnCode",
                         modifier = Modifier.padding(8.dp),
@@ -233,27 +258,12 @@ fun RunIperf3Screen(iperf3Binary: File) {
 
                 for (index in 0 until outputLines.size) {
                     var line: String = outputLines.get(index)
-                    val annotatedOutputLine = buildAnnotatedString {
-                        // Part 2: Blue (bold)
-                        withStyle(
-                            style = SpanStyle(
-                                color = Color.Blue,
-                                fontFamily = mesloFontFamily(),
-                                fontSize = 11.sp,
-                                fontStyle = FontStyle.Normal
-                            )
-                        ) {
-                            append(line)
-                        }
-                    }
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            text = annotatedOutputLine,
+                            text = line,
                             textAlign = TextAlign.Left,
-                            style = mesloMonoStyle,
                             modifier = Modifier
                                 .fillMaxWidth()
-
                         )
                     }
                 }
@@ -261,6 +271,7 @@ fun RunIperf3Screen(iperf3Binary: File) {
             }
         }
     }
+
 }
 
 

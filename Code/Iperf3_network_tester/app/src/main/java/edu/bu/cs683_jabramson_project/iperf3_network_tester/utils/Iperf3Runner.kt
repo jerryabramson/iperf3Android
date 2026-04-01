@@ -31,6 +31,7 @@ import java.io.InputStreamReader
 @RequiresApi(Build.VERSION_CODES.O)
 suspend fun iperf3Runner(
     updateProgress: (Float) -> Unit,
+    callback: (String) -> Unit,
     iperfBinary: File,
     serverHost: String,
     durationSec: Int = 10,
@@ -76,13 +77,14 @@ suspend fun iperf3Runner(
     // Launch two coroutines: one for stdout, one for stderr
     val stdoutJob = launch {
         readStream(process.inputStream) { line ->
-            addLine(line, outputLines)
+          //  addLine(line, outputLines)
             if (line.contains("Interval") && !started) {
                 started = true
                 intervalCount = 0
             } else if (line.contains("[") && line.contains("]")) {
                 if (started) intervalCount++
             }
+            callback(line)
             updateProgress(intervalCount.toFloat() / 10)
         }
     }
