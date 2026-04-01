@@ -13,7 +13,19 @@ The application being developed will utilize the de-facto network protocol tool 
 * **Note**: The application will only be implementing the client-side functionality of iPerf3, it is assumed that an iPerf3 server is running on another accessible via the Android client.
 
 
-## More details
+## Special Note to the teaching team
+* Due to the requirement for a native iperf3 executable that is executable on the Android device or
+emulator, certain workarounds will be necessary in order to proper run and grade the project at this stage.
+*  So far all of the emulators I have checked that can be started up by Android Studio contain the required `/bin/iperf3` executable.
+* It is also possible that several physical Android phones contain this executable.
+* As an emergency fallback, if the code cannot execute `iperf3` a stubbed version of the execution path is used.
+
+### Continuing research on native execution, SELinux contexts, and sandbox requirements are discussed in detail here:
+- https://github.com/CS683/project-jerryabramson/blob/main/Code/Iperf3_network_tester/AGENTS.md#native-binary-handling-iperf3
+
+#### And in even more details here:
+- https://github.com/CS683/project-jerryabramson/blob/main/Code/Iperf3_network_tester/session-ses_2ba1.md
+
 
 * For my project I am implementing a network performance monitor based on the iPerf3 protocol.
 * Although there are a couple of Android apps that already partially implement this, one of them is terribly complex, quite expensive,  (Analti), more focused on WiFi and internet performance monitoring.

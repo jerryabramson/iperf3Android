@@ -35,9 +35,10 @@ if [[ $LL -ne 1 ]]; then
     exit 1
 fi
 set -x
-adb push $EXEC /data/local/tmp/$EXEC
-adb shell chmod 777 /data/local/tmp/$EXEC
+adb push $EXEC /data/local/tmp/iperf3
+adb shell chmod 777 /data/local/tmp/iperf3
 set +x
+
 echo "Nice to have, but not a fatal error:"
-adb shell ln -s /data/local/tmp/$EXEC iperf3
+#adb shell ln -s /data/local/tmp/$EXEC iperf3
 
