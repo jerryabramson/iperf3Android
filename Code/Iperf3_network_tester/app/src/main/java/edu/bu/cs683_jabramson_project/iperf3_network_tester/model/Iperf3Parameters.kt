@@ -3,11 +3,13 @@ package edu.bu.cs683_jabramson_project.iperf3_network_tester.model
 import java.io.File
 
 data class Iperf3Parameters(
-    val iperf3Binary: File,
-    val serverHost: String,
-    val durationSecs: Int,
-    val results: Iperf3ResultsData,
-    val isReverse: Boolean = false,
-    val forceFlush: Boolean = true,
-    val timeout: Long
+    var iperf3Binary:File = File(""),
+    var serverHost: String = "",
+    var durationSecs: Int = 0,
+    var results: Iperf3ResultsData = Iperf3ResultsData(),
+    var isReverse: Boolean = false,
+    var forceFlush: Boolean = true,
+    var timeout: Long = 0,
+    var runner: suspend () -> Unit = { }
 )
+

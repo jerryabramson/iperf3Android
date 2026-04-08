@@ -4,6 +4,7 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
             android:allowBackup="true"
+            android:name="edu.bu.cs683_jabramson_project.iperf3_network_tester.Iperf3Application"
             android:dataExtractionRules="@xml/data_extraction_rules"
             android:fullBackupContent="@xml/backup_rules"
             android:icon="@mipmap/ic_launcher"
@@ -12,7 +13,7 @@
             android:supportsRtl="true"
             android:theme="@style/Theme.MyApplication">
         <activity
-                android:name=".MainActivity"
+                android:name="edu.bu.cs683_jabramson_project.iperf3_network_tester.MainActivity"
                 android:exported="true"
                 android:theme="@style/Theme.MyApplication">
             <intent-filter>

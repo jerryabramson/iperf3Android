@@ -41,6 +41,7 @@ import java.io.File
 class Iperf3RunViewModel @Inject constructor (
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+    val iperf3Parameters: Iperf3Parameters = Iperf3Parameters()
     private val projId: String? = savedStateHandle[Constants.PROJECT_STATE]
     private var errorLines: MutableList<String> = emptyList<String>().toMutableList()
     private val outputLines: MutableList<String> = emptyList<String>().toMutableList()
@@ -48,22 +49,50 @@ class Iperf3RunViewModel @Inject constructor (
     var progress: Float = 0.toFloat()
     var linePointer = 0
     var iperf3ResultsData: Iperf3ResultsData = Iperf3ResultsData(aLine, errorLines)
-    private val _uiStateFlow = MutableStateFlow(
-        Iperf3Parameters(
-            iperf3Binary = File("/bin/iperf3"),
-            serverHost = "192.168.1.2",
-            durationSecs = 10,
-            results = iperf3ResultsData,
-            isReverse = true,
-            forceFlush = true,
-            timeout = 10
-        )
-    )
+    private val _uiStateFlow = MutableStateFlow(iperf3Parameters)
+
     val uiStateFlow: StateFlow<Iperf3Parameters> = _uiStateFlow.asStateFlow()
 
+    init {
+        Log.d("Iperf3Runner: ", "init")
+//        _uiStateFlow.update {
+//            it.copy(
+//                iperf3Binary = File("/bin/iperf3"),
+//                serverHost = "192.168.1.2",
+//                durationSecs = 10,
+//                results = iperf3ResultsData,
+//                isReverse = true,
+//                forceFlush = true,
+//                timeout = 10,
+//                runner = { runIperf3() })
+//        }
+    }
+    suspend fun setupIperf3Parameters(iperf3Parameters: Iperf3Parameters) {
+        _uiStateFlow.update { iperf3Parameters }
+    }
 
     fun updateProgress(l: Float) {
         progress = l
+    }
+
+    fun setServerHost(host: String) {
+        _uiStateFlow.update { it.copy(serverHost = host) }
+    }
+
+    fun setDuration(duration: Int) {
+        _uiStateFlow.update { it.copy(durationSecs = duration) }
+    }
+
+    fun setReverse(reverse: Boolean) {
+        _uiStateFlow.update { it.copy(isReverse = reverse) }
+    }
+
+    fun setForceFlush(forceFlush: Boolean) {
+        _uiStateFlow.update { it.copy(forceFlush = forceFlush) }
+    }
+
+    fun setTimeout(to: Long) {
+        _uiStateFlow.update { it.copy(timeout = to) }
     }
 
     fun getResultLine(line: String) {

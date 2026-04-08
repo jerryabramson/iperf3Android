@@ -1,56 +1,63 @@
 // app/src/main/java/edu/bu/cs683_jabramson_project/iperf3_network_tester/ui/RunIperf3Screen.kt
 package edu.bu.cs683_jabramson_project.iperf3_network_tester
 
-import android.Manifest
 
+import android.Manifest
 import android.content.pm.PackageManager
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.hilt.navigation.compose.hiltViewModel
-
-
-
-import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-
-
-import androidx.compose.ui.text.TextStyle   // ← this is the import you need
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
-
-
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme.mesloFontFamily
-
-
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.Iperf3RunViewModel
-
 import kotlinx.coroutines.launch
-import java.io.File
-
-import dagger.hilt.android.lifecycle.HiltViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RunIperf3Screen(iperf3Binary: File) {
+fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
+                    viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewModel>())
+{
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewModel>()
 
+
+
+    val uiState by viewModel.uiStateFlow.collectAsState()
 
     // 2️⃣ Build a TextStyle that uses the font
     val mesloMonoStyle = TextStyle(
@@ -81,8 +88,8 @@ fun RunIperf3Screen(iperf3Binary: File) {
     // -------------------------------------------------------------------------
     // UI State
     // -------------------------------------------------------------------------
-    var hostName by remember { mutableStateOf("") }
-    var hostNameEntry by remember { mutableStateOf("") }
+
+
     var isRunning by remember { mutableStateOf(false) }
     var isFinished by remember { mutableStateOf(false) }
     var numSeconds by remember { mutableFloatStateOf(0f) }
@@ -91,6 +98,7 @@ fun RunIperf3Screen(iperf3Binary: File) {
     var returnCode by remember { mutableIntStateOf(0) }
     var outputLines by remember { mutableStateOf(emptyList<String>().toMutableList()) }
     var latestLine by remember { mutableStateOf("") }
+
     fun outputIt(line: String) {
         outputLines.add(line)
         latestLine = line
@@ -98,6 +106,7 @@ fun RunIperf3Screen(iperf3Binary: File) {
     }
 
 
+    var ip = uiState.iperf3Binary.absolutePath
     // -------------------------------------------------------------------------
     // Helper to pick the ABI (you could expose a dropdown instead)
     // -------------------------------------------------------------------------
@@ -108,7 +117,7 @@ fun RunIperf3Screen(iperf3Binary: File) {
     // -------------------------------------------------------------------------
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("iperf‑3 Tester, binary: '$iperf3Binary'") })
+            TopAppBar(title = { Text("iperf‑3 binary: '$ip'") })
         }
     ) { padding ->
         Column(
@@ -128,8 +137,8 @@ fun RunIperf3Screen(iperf3Binary: File) {
 
                 ) {
                 TextField(
-                    value = hostNameEntry,
-                    onValueChange = { hostNameEntry = it },
+                    value = uiState.serverHost,
+                    onValueChange = { viewModel.setServerHost(it) },
                     enabled = !isRunning,
                     placeholder = { Text("jabramson.com") },
                     modifier = Modifier
@@ -165,26 +174,28 @@ fun RunIperf3Screen(iperf3Binary: File) {
                             requestPermissionLauncher.launch(Manifest.permission.INTERNET)
                             return@Button
                         }
-                        if (hostNameEntry.isEmpty()) hostNameEntry = "jabramson.com"
-                        hostName = hostNameEntry
-                        hostNameEntry = ""
+                        if (uiState.serverHost.isEmpty()) viewModel.setServerHost("jabramson.com")
                         isFinished = false
                         isRunning = true
+
                         coroutineScope.launch {
-                            returnCode = iperf3Runner(
-                                { progress ->
-                                    currentProgress = progress
-                                },
-                                ::outputIt,
-                                iperf3Binary,
-                                hostName,
-                                10,
-                                outputLines
-                            )
-                            isRunning = false
-                            isFinished = true
+                            viewModel.run { runIperf3() }
 
                         }
+//                            returnCode = iperf3Runner(
+//                                { progress ->
+//                                    currentProgress = progress
+//                                },
+//                                ::outputIt,
+//                                iperf3Binary,
+//                                hostName,
+//                                10,
+//                                outputLines
+//                            )
+//                            isRunning = false
+//                            isFinished = true
+//
+//                        }
                     }, enabled = !isRunning
                 ) {
                     Text("Run")
@@ -198,14 +209,14 @@ fun RunIperf3Screen(iperf3Binary: File) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        "Testing for 10 seconds against remote host $hostName",
+                        "Testing for 10 seconds against remote host $uiState.serverHost",
                         modifier = Modifier
                             .padding(8.dp)
                             .fillMaxWidth()
                     )
 
                     LinearProgressIndicator(
-                        progress = currentProgress,
+                        progress = { currentProgress },
                         modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -224,7 +235,7 @@ fun RunIperf3Screen(iperf3Binary: File) {
                         .padding(8.dp)) {
                         Row(modifier = Modifier.fillMaxWidth()) {
                             Text(
-                                text = latestLine,
+                                text = uiState.results.line, //latestLine,
                                 textAlign = TextAlign.Left,
                                 modifier = Modifier
                                     .fillMaxWidth()
