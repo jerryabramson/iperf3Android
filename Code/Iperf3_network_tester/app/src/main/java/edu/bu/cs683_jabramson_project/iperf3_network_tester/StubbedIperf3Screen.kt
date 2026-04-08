@@ -55,7 +55,7 @@ fun StubbedIperf3Screen() {
 
             if (loading) {
                 LinearProgressIndicator(
-                    progress = { currentProgress },
+                    progress = currentProgress,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

@@ -1,14 +1,23 @@
 [versions]
 agp = "9.1.0"
+kotlin = "2.3.20"
+ksp = "2.3.6"  # ← Using latest compatible version for Kotlin 2.3.20
+hilt = "2.59.2"
+composeBom = "2026.03.01"  # ← Using valid Compose BOM version
+
+
 coreKtx = "1.18.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
+kotlinGradlePlugin = "2.3.20"
 lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.13.0"
-kotlin = "2.3.20"
-composeBom = "2026.03.01"
 leanback = "1.2.0"
+androidx-room = "2.8.4"
+constraintlayout = "2.2.1"
+symbolProcessingGradlePlugin = "2.3.6"
+
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -28,7 +37,30 @@ androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-te
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-leanback = { group = "androidx.leanback", name = "leanback", version.ref = "leanback" }
 
+
+hilt-android-core = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+
+
+# Hilt Testing
+hilt-android-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hilt" }  # ✅ Correct
+
+#androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "androidxHiltNavigationCompose" }
+
+
+# Room Runtime
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "androidx-room" }
+# Room Compiler (Annotation Processor)
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "androidx-room" }
+# Optional: Room Kotlin Extensions (if using Kotlin)
+androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "androidx-room" }
+androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlinGradlePlugin" }
+symbol-processing-gradle-plugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin", version.ref = "symbolProcessingGradlePlugin" }
+
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }  # ← THIS IS THE FIX
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }

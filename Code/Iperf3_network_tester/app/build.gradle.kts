@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.devtools.ksp")
 }
 
 
@@ -72,4 +73,39 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation(libs.androidx.lifecycle.viewmodel.compose.android)
+
+
+    // Hilt Runtime
+    implementation(libs.hilt.android.core)
+
+    // Hilt Compiler (USING KSP - REQUIRES KSP PLUGIN APPLIED)
+    ksp(libs.hilt.compiler)  // ← NOW USING KSP + CORRECT ARTIFACT
+
+    // Optional: Hilt for testing
+    kspTest(libs.hilt.android.testing)
+
+
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.compiler)
+
+    // kapt + room
+    implementation(libs.androidx.room.runtime)
+
+    // Room Compiler (via KAPT)
+    //kapt(libs.androidx.room.compiler)
+
+    // Optional: Room Kotlin Extensions (recommended for Kotlin)
+    implementation(libs.androidx.room.ktx)
+}
+
+// ⚠️ CRITICAL: Add this resolution strategy OUTSIDE android/dependencies blocks
+configurations.all {
+    resolutionStrategy {
+        // Force the NEWER, canonical JetBrains annotations to win
+        force("org.jetbrains:annotations:23.0.0")
+
+        // EXCLUDE the legacy IntelliJ annotations entirely (safe to do)
+        exclude(group = "com.intellij", module = "annotations")
+    }
 }

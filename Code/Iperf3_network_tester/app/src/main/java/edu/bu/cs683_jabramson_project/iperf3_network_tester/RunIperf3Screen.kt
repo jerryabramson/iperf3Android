@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
-import androidx.compose.material3.HorizontalDivider
+//import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -95,7 +95,7 @@ fun RunIperf3Screen(iperf3Binary: File) {
     var isFinished by remember { mutableStateOf(false) }
     var numSeconds by remember { mutableFloatStateOf(0f) }
     var currentProgress by remember { mutableFloatStateOf(0f) }
-
+    var foo: Float
     var returnCode by remember { mutableIntStateOf(0) }
     var outputLines by remember { mutableStateOf(emptyList<String>().toMutableList()) }
     var latestLine by remember { mutableStateOf("") }
@@ -213,7 +213,7 @@ fun RunIperf3Screen(iperf3Binary: File) {
                     )
 
                     LinearProgressIndicator(
-                        progress = { currentProgress },
+                        progress = currentProgress,
                         modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -246,13 +246,6 @@ fun RunIperf3Screen(iperf3Binary: File) {
                         modifier = Modifier.padding(8.dp),
                         textAlign = TextAlign.Left,
                         fontSize = 18.sp)
-                    HorizontalDivider(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(2.dp),
-                        thickness = 4.dp,
-                        color = Color.DarkGray
-                    )
                 }
                 currentProgress = 0f
 
