@@ -1,53 +1,37 @@
-package edu.bu.cs683_jabramson_project.iperf3_network_tester.utils
+package edu.bu.cs683_jabramson_project.iperf3_network_tester.runner
 
-import android.content.Context
-import java.io.File
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
-
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3ResultsData
 import kotlinx.coroutines.Dispatchers
-
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
+import java.io.File
+import java.io.InputStream
 import java.io.InputStreamReader
 
-/**
- * Runs the native iperf3 binary that is extracted from app assets to the app's
- * private files directory.
- *
- * This is a **suspending** function so it can be called from Compose
- * without blocking the UI thread.
- *
- * @param context   Any Android Context (usually an Activity or Application)
- * @param serverHost Hostname or IP of the iperf3 server
- * @param durationSec Test length in seconds (default = 10)
- * @return Raw stdout of the iperf3 process
- * @throws Exception if the binary cannot be found, executed, or the process fails
- */
-
-
-@RequiresApi(Build.VERSION_CODES.O)
 suspend fun iperf3Runner(
     updateProgress: (Float) -> Unit,
     callback: (String) -> Unit,
-    iperfBinary: File,
-    serverHost: String,
-    durationSec: Int = 10,
-    outputLines: MutableList<String>
+    iperf3Parameters: Iperf3Parameters
 ): Int = withContext(Dispatchers.IO) {
-    Log.d("Iperf3Runner", "iperf3 binary $iperfBinary")
-    val command = iperfBinary.absolutePath
 
+    Log.d("Iperf3Runner", "iperf3 binary ${iperf3Parameters.iperf3Binary}")
+    val command = iperf3Parameters.iperf3Binary.absolutePath
+    var flush  = ""
+    var reverse = ""
+    if (iperf3Parameters.forceFlush) flush = "--forceflush"
+    if (iperf3Parameters.isReverse) reverse = "-R"
     val processBuilder = ProcessBuilder(
         command,
-        "-c", serverHost,
-        "-R",
-        "--forceflush",
+        "-c", iperf3Parameters.serverHost,
+        reverse,
+        flush,
         "--connect-timeout",
-        "3000",
-        "-t", durationSec.toString())
+        iperf3Parameters.timeout.toString(),
+        "-t", iperf3Parameters.durationSecs.toString()
+    )
         .redirectError(ProcessBuilder.Redirect.PIPE)
         .redirectOutput(ProcessBuilder.Redirect.PIPE)
     processBuilder.redirectErrorStream(true)   // merge stderr into stdout
@@ -58,9 +42,8 @@ suspend fun iperf3Runner(
     val process = processBuilder.start()
 
 
-
     fun readStream(
-        input: java.io.InputStream,
+        input: InputStream,
         consumer: (String) -> Unit
     ) = BufferedReader(InputStreamReader(input)).use { reader ->
         var line: String? = null
@@ -69,7 +52,7 @@ suspend fun iperf3Runner(
         }
     }
 
-    val extraLines: Float = (durationSec.toFloat() * 1) + 5
+    val extraLines: Float = (iperf3Parameters.durationSecs.toFloat() * 1) + 5
 
 
     var intervalCount = 0
@@ -77,7 +60,7 @@ suspend fun iperf3Runner(
     // Launch two coroutines: one for stdout, one for stderr
     val stdoutJob = launch {
         readStream(process.inputStream) { line ->
-          //  addLine(line, outputLines)
+            //  addLine(line, outputLines)
             if (line.contains("Interval") && !started) {
                 started = true
                 intervalCount = 0
@@ -91,7 +74,7 @@ suspend fun iperf3Runner(
 
     val stderrJob = launch {
         readStream(process.errorStream) { err ->
-            addError(err,  outputLines)
+            addError(err, iperf3Parameters.results.errors)
         }
     }
 
@@ -102,12 +85,6 @@ suspend fun iperf3Runner(
     updateProgress((1.0.toFloat()))
     return@withContext exitValue
     //val output = process.inputStream.bufferedReader().readText()
-
-
-}
-fun addLine(line: String, newLine: MutableList<String>) {
-    newLine.add(line)
-    Log.d("Iperf3Runner: ", "stdout: $line")
 }
 
 fun addError(line: String, newLine: MutableList<String>) {

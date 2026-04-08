@@ -11,7 +11,7 @@ android {
     defaultConfig {
         applicationId = "edu.bu.cs683_jabramson_project.iperf3_network_tester"
         namespace = "edu.bu.cs683_jabramson_project.iperf3_network_tester"
-        minSdk = 23
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
