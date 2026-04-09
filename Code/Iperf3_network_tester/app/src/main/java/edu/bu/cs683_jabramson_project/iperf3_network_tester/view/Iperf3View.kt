@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
@@ -53,9 +55,7 @@ import kotlinx.coroutines.launch
 fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                     viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewModel>())
 {
-    //val context = LocalContext.current
     val uiState by viewModel.uiStateFlow.collectAsState()
-
     viewModel.setupIperf3Parameters(iperf3Parameters)
     viewModel.setTimeout(3000)
     viewModel.setDuration(10)
@@ -63,8 +63,9 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
     // 2️⃣ Build a TextStyle that uses the font
     val mesloMonoStyle = TextStyle(
         fontFamily = mesloFontFamily(),
-        fontSize = 10.sp,
-        letterSpacing = 0.2.sp
+        fontSize = 14.sp,
+        letterSpacing = 0.2.sp,
+        color = MaterialTheme.colorScheme.onSurface
     )   // optional tweak for monospace readability
 
 
@@ -73,19 +74,10 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
     // -------------------------------------------------------------------------
     // UI State
     // -------------------------------------------------------------------------
-
-
-    var isRunning by remember { mutableStateOf(false) }
-    var isFinished by remember { mutableStateOf(false) }
+    //var isRunning by remember { mutableStateOf(false) }
     var numSeconds by remember { mutableFloatStateOf(0f) }
-    var currentProgress by remember { mutableFloatStateOf(0f) }
-
-    var returnCode by remember { mutableIntStateOf(0) }
-    var outputLines by remember { mutableStateOf(emptyList<String>().toMutableList()) }
-
-    val ip = uiState.iperf3Binary.absolutePath
-
-
+    var hostName by remember { mutableStateOf(uiState.iperf3Parameters.serverHost) }
+    val ip = uiState.iperf3Parameters.iperf3Binary.absolutePath
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("iperf‑3 binary: '$ip'") })
@@ -98,19 +90,27 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
         ) {
 
             val prompt = "Host Name or IP Address"
+            if (uiState.isFinished) {
+                Text(
+                    "return Code: ${uiState.returnCode}",
+                    modifier = Modifier.padding(16.dp),
+                    textAlign = TextAlign.Left,
+                    fontSize = 18.sp
+                )
+            }
 
             Row(
-                //modifier = Modifier.fillMaxWidth().padding(dimensionResource(id = R.dimen.common_padding)),
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .padding(8.dp)
+                    .padding(14.dp)
                     .fillMaxWidth(),
 
                 ) {
+
                 TextField(
-                    value = uiState.serverHost,
-                    onValueChange = { viewModel.setServerHost(it) },
-                    enabled = !isRunning,
+                    value = uiState.hostName, // uiState.iperf3Parameters.serverHost,
+                    onValueChange = viewModel::updateHostName,   //viewModel.setServerHost(hostName) },
+                    enabled = !uiState.isRunning,
                     placeholder = { Text("jabramson.com") },
                     modifier = Modifier
                         .width(260.dp)
@@ -140,100 +140,81 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                 Button(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
-                        if (uiState.serverHost.isEmpty()) viewModel.setServerHost("jabramson.com")
-                        isRunning = true
                         viewModel.launch()
-                        //coroutineScope.launch {
-                        //    viewModel.run { runIperf3() }
-//
-  //                      }
-//                            returnCode = iperf3Runner(
-//                                { progress ->
-//                                    currentProgress = progress
-//                                },
-//                                ::outputIt,
-//                                iperf3Binary,
-//                                hostName,
-//                                10,
-//                                outputLines
-//                            )
-//                            isRunning = false
-//                            isFinished = true
-//
-//                        }
-                    }, enabled = !isRunning
+                    }, enabled = !uiState.isRunning
                 ) {
                     Text("Run")
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
-            if (isRunning) {
 
+            Spacer(modifier = Modifier.height(24.dp))
+
+            if (uiState.isRunning) {
                 Column(
                     Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        "Testing for 10 seconds against remote host ${uiState.serverHost}",
+                        "Testing for 10 seconds against remote host ${uiState.iperf3Parameters.serverHost}",
                         modifier = Modifier
                             .padding(8.dp)
-                            .fillMaxWidth()
+                            .fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontSize = 18.sp
                     )
 
                     LinearProgressIndicator(
-                        progress = { uiState.results.progress },
+                        progress = { uiState.progress },
                         modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                         strokeCap = ProgressIndicatorDefaults.LinearStrokeCap,
                     )
-                    numSeconds = uiState.results.progress * 10
-                    Text(
-                        "${numSeconds.toInt()} seconds elapsed",
-                        modifier = Modifier.padding(8.dp),
-                        textAlign = TextAlign.Center
-                    )
-                    Text("Results")
-                    Column(Modifier.fillMaxWidth()
-                        .padding(8.dp)) {
-                    }
-                    // Show the accumulated lines in a lazy list
-                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                        items(uiState.results.outputLines.size) { index ->
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = uiState.results.outputLines.get(index),
-                                    textAlign = TextAlign.Left,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                )
-                            }
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        numSeconds = uiState.progress * 10
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                            Text(
+                                "${numSeconds.toInt()} seconds elapsed",
+                                modifier = Modifier.padding(8.dp),
+                                textAlign = TextAlign.Center,
+                                fontSize = 22.sp
+                            )
                         }
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-            } else {
-                Column(Modifier.fillMaxWidth()) {
-                    Text("return Code: $returnCode",
-                        modifier = Modifier.padding(8.dp),
-                        textAlign = TextAlign.Left,
-                        fontSize = 18.sp)
-                }
 
-
-                for (index in 0 until uiState.results.outputLines.size) {
-                    var line: String = uiState.results.outputLines.get(index)
-                    Row(modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            text = line,
+                            uiState.latestLine,
+                            color = MaterialTheme.colorScheme.primary,
                             textAlign = TextAlign.Left,
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .fillMaxWidth(),
+                            fontSize = 18.sp
                         )
                     }
                 }
-
             }
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth(),
+                thickness = 4.dp,
+                color = MaterialTheme.colorScheme.primary
+            )
+            // Show the accumulated lines in a lazy list
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                items(uiState.outputLines.size) { index ->
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = uiState.outputLines.get(index),
+                            textAlign = TextAlign.Left,
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            style = mesloMonoStyle
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            //}
+
         }
     }
 

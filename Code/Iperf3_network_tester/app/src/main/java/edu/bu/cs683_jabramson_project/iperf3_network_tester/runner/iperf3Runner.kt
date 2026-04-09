@@ -63,8 +63,6 @@ suspend fun iperf3Runner(
     // Launch two coroutines: one for stdout, one for stderr
     val stdoutJob = launch {
         readStream(process.inputStream) { line ->
-            //  addLine(line, outputLines)
-            Log.d("Iperf3Runner: ", "stdout: $line")
             if (line.contains("Interval") && !started) {
                 started = true
                 intervalCount = 0
