@@ -3,6 +3,25 @@
 ## Introduction
 This document provides guidelines for agentic coding agents working on the Iperf3 Network Tester Android project. It covers build/test/lint commands, code style, and best practices.
 
+## Codex-Specific Instructions
+
+```  No tests were needed for this documentation change.
+Token usage: total=79,297 input=68,315 (+ 589,952 cached) output=10,982 (reasoning 463)
+To continue this session, run codex resume 019d6f95-8022-7bc2-ba36-3a3bd44d2801
+```
+
+- Inspect local project files before making assumptions about architecture, dependencies, or package names
+- Prefer `rg` and `rg --files` for codebase search because they are faster than `grep` and `find`
+- Before editing code, read the surrounding file and preserve existing patterns unless there is a clear reason to refactor
+- Use `apply_patch` for targeted file edits when working from the Codex CLI
+- Do not overwrite or revert unrelated user changes; assume the git worktree may already contain in-progress work
+- Make the smallest change that fully solves the request, then verify only the impacted scope first
+- For Kotlin and Compose changes, preserve existing naming, state management, and Material 3 usage unless the task explicitly asks for broader cleanup
+- After code changes, prefer project-standard verification commands such as `./gradlew :app:testDebugUnitTest`, `./gradlew :app:assembleDebug`, or `./gradlew :app:lintDebug` based on the area touched
+- If a required verification step cannot run because of environment limits, missing Android SDK components, or lack of a connected device/emulator, state that clearly in the final report
+- In final responses, summarize what changed, list any verification performed, and call out remaining risks or follow-up work when relevant
+- For review requests, prioritize concrete findings, regressions, and missing tests over general summaries
+
 ## Project Overview
 - Android application using Jetpack Compose for UI
 - Kotlin programming language
