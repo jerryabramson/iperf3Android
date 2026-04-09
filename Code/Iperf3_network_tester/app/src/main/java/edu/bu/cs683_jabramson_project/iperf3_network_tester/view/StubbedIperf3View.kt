@@ -1,4 +1,4 @@
-package edu.bu.cs683_jabramson_project.iperf3_network_tester
+package edu.bu.cs683_jabramson_project.iperf3_network_tester.view
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -36,7 +37,7 @@ fun StubbedIperf3Screen() {
     ) { padding ->
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth()
                 .padding(padding)
                 .padding(16.dp)

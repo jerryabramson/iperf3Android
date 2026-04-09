@@ -10,6 +10,7 @@ import java.io.BufferedReader
 import java.io.File
 import java.io.InputStream
 import java.io.InputStreamReader
+import kotlin.concurrent.timer
 
 suspend fun iperf3Runner(
     updateProgress: (Float) -> Unit,
@@ -23,18 +24,20 @@ suspend fun iperf3Runner(
     var reverse = ""
     if (iperf3Parameters.forceFlush) flush = "--forceflush"
     if (iperf3Parameters.isReverse) reverse = "-R"
+    var localTimeout = 3000L
+    if (iperf3Parameters.timeout != 0L) localTimeout = iperf3Parameters.timeout
     val processBuilder = ProcessBuilder(
         command,
         "-c", iperf3Parameters.serverHost,
         reverse,
         flush,
         "--connect-timeout",
-        iperf3Parameters.timeout.toString(),
+        localTimeout.toString(),
         "-t", iperf3Parameters.durationSecs.toString()
     )
         .redirectError(ProcessBuilder.Redirect.PIPE)
         .redirectOutput(ProcessBuilder.Redirect.PIPE)
-    processBuilder.redirectErrorStream(true)   // merge stderr into stdout
+   // processBuilder.redirectErrorStream(true)   // merge stderr into stdout
 
     // -----------------------------------------------------------
     // 4️⃣ Launch, capture output, wait for termination
@@ -61,6 +64,7 @@ suspend fun iperf3Runner(
     val stdoutJob = launch {
         readStream(process.inputStream) { line ->
             //  addLine(line, outputLines)
+            Log.d("Iperf3Runner: ", "stdout: $line")
             if (line.contains("Interval") && !started) {
                 started = true
                 intervalCount = 0

@@ -1,5 +1,5 @@
-// app/src/main/java/edu/bu/cs683_jabramson_project/iperf3_network_tester/ui/RunIperf3Screen.kt
-package edu.bu.cs683_jabramson_project.iperf3_network_tester
+// app/src/main/java/edu/bu/cs683_jabramson_project/iperf3_network_tester/ui/Iperf3View.kt
+package edu.bu.cs683_jabramson_project.iperf3_network_tester.view
 
 
 import android.Manifest
@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
@@ -52,12 +53,12 @@ import kotlinx.coroutines.launch
 fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                     viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewModel>())
 {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-
-
-
+    //val context = LocalContext.current
     val uiState by viewModel.uiStateFlow.collectAsState()
+
+    viewModel.setupIperf3Parameters(iperf3Parameters)
+    viewModel.setTimeout(3000)
+    viewModel.setDuration(10)
 
     // 2️⃣ Build a TextStyle that uses the font
     val mesloMonoStyle = TextStyle(
@@ -67,23 +68,7 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
     )   // optional tweak for monospace readability
 
 
-    // -------------------------------------------------------------------------
-    // Permission handling (INTERNET) – only needed on Android 13+ if you use
-    // clear‑text network; otherwise the manifest declaration is enough.
-    // -------------------------------------------------------------------------
-    val hasInternetPermission = remember {
-        context.checkSelfPermission(Manifest.permission.INTERNET) ==
-                PackageManager.PERMISSION_GRANTED
-    }
 
-    // Launcher that shows the permission dialog
-    val requestPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (!isGranted) {
-            Log.w("RunIperf3Screen", "Internet permission denied – test cannot run.")
-        }
-    }
 
     // -------------------------------------------------------------------------
     // UI State
@@ -94,27 +79,13 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
     var isFinished by remember { mutableStateOf(false) }
     var numSeconds by remember { mutableFloatStateOf(0f) }
     var currentProgress by remember { mutableFloatStateOf(0f) }
-    var foo: Float
+
     var returnCode by remember { mutableIntStateOf(0) }
     var outputLines by remember { mutableStateOf(emptyList<String>().toMutableList()) }
-    var latestLine by remember { mutableStateOf("") }
 
-    fun outputIt(line: String) {
-        outputLines.add(line)
-        latestLine = line
-        Log.d("Iperf3Runner: ", "stdout: $line")
-    }
+    val ip = uiState.iperf3Binary.absolutePath
 
 
-    var ip = uiState.iperf3Binary.absolutePath
-    // -------------------------------------------------------------------------
-    // Helper to pick the ABI (you could expose a dropdown instead)
-    // -------------------------------------------------------------------------
-    //val abi = remember { chooseAbi(context) }   // from the snippet in section 3
-
-    // -------------------------------------------------------------------------
-    // UI
-    // -------------------------------------------------------------------------
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("iperf‑3 binary: '$ip'") })
@@ -169,19 +140,13 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                 Button(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
-                        if (!hasInternetPermission) {
-                            // Request permission and abort launching the test
-                            requestPermissionLauncher.launch(Manifest.permission.INTERNET)
-                            return@Button
-                        }
                         if (uiState.serverHost.isEmpty()) viewModel.setServerHost("jabramson.com")
-                        isFinished = false
                         isRunning = true
-
-                        coroutineScope.launch {
-                            viewModel.run { runIperf3() }
-
-                        }
+                        viewModel.launch()
+                        //coroutineScope.launch {
+                        //    viewModel.run { runIperf3() }
+//
+  //                      }
 //                            returnCode = iperf3Runner(
 //                                { progress ->
 //                                    currentProgress = progress
@@ -209,38 +174,51 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        "Testing for 10 seconds against remote host $uiState.serverHost",
+                        "Testing for 10 seconds against remote host ${uiState.serverHost}",
                         modifier = Modifier
                             .padding(8.dp)
                             .fillMaxWidth()
                     )
 
                     LinearProgressIndicator(
-                        progress = { currentProgress },
+                        progress = { uiState.results.progress },
                         modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                         strokeCap = ProgressIndicatorDefaults.LinearStrokeCap,
                     )
-                    numSeconds = currentProgress * 10
+                    numSeconds = uiState.results.progress * 10
                     Text(
                         "${numSeconds.toInt()} seconds elapsed",
                         modifier = Modifier.padding(8.dp),
                         textAlign = TextAlign.Center
                     )
                     // Show the accumulated lines in a lazy list
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = uiState.results.line, //latestLine,
+                            textAlign = TextAlign.Left,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                        )
+                    }
 
+                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                        items(outputLines.size) { index ->
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = uiState.results.outputLines.get(index),
+                                    textAlign = TextAlign.Left,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
                     Text("Results")
                     Column(Modifier.fillMaxWidth()
                         .padding(8.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                text = uiState.results.line, //latestLine,
-                                textAlign = TextAlign.Left,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                            )
-                        }
                     }
                 }
             } else {
