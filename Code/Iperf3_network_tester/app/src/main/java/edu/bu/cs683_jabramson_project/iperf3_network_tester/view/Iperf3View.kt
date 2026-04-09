@@ -193,18 +193,13 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                         modifier = Modifier.padding(8.dp),
                         textAlign = TextAlign.Center
                     )
-                    // Show the accumulated lines in a lazy list
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = uiState.results.line, //latestLine,
-                            textAlign = TextAlign.Left,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                        )
+                    Text("Results")
+                    Column(Modifier.fillMaxWidth()
+                        .padding(8.dp)) {
                     }
-
+                    // Show the accumulated lines in a lazy list
                     LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                        items(outputLines.size) { index ->
+                        items(uiState.results.outputLines.size) { index ->
                             Row(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     text = uiState.results.outputLines.get(index),
@@ -216,10 +211,6 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                         }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
-                    Text("Results")
-                    Column(Modifier.fillMaxWidth()
-                        .padding(8.dp)) {
-                    }
                 }
             } else {
                 Column(Modifier.fillMaxWidth()) {
@@ -228,10 +219,10 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                         textAlign = TextAlign.Left,
                         fontSize = 18.sp)
                 }
-                currentProgress = 0f
 
-                for (index in 0 until outputLines.size) {
-                    var line: String = outputLines.get(index)
+
+                for (index in 0 until uiState.results.outputLines.size) {
+                    var line: String = uiState.results.outputLines.get(index)
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = line,
@@ -241,7 +232,7 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                         )
                     }
                 }
-                outputLines.clear()
+
             }
         }
     }
