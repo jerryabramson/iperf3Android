@@ -1,3 +1,5 @@
+#I am providing the following script for this workaround:
+```
 #!/usr/bin/env bash
 EXEC=iperf3.20
 URL=https://github.com/davidBar-On/android-iperf3/raw/refs/heads/gh-pages/libs/arm64-v8a/$EXEC
@@ -45,7 +47,4 @@ adb shell getenforce
 adb shell su root  setenforce 0
 adb shell getenforce
 set +
-
-#echo "Nice to have, but not a fatal error:"
-##adb shell ln -s /data/local/tmp/$EXEC iperf3
-
+```

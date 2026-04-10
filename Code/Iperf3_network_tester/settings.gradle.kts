@@ -25,5 +25,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "My Application"
+//rootProject.name = "My Application"
+rootProject.name = "iperf3Tester"
+
 include(":app")

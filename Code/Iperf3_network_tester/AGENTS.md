@@ -168,6 +168,9 @@ This project uses a native iperf3 binary for network testing. Due to Android's S
 **Course Constraints (One of these must be satisfied for project viability):**
 1. **Android Emulator with Root**: Upload iperf3 and make it executable using root
 2. **Pre-installed Binary**: Some Android devices include `/bin/iperf3` - use that
+I have found a reasonable solution in order for this project to be graded.
+- https://github.com/CS683/project-jerryabramson/blob/main/Code/Iperf3_network_tester/IPERF3_EXE.md
+
 3. **Instructor Device**: Ensure the instructor has a rooted Android device
 
 **Current Implementation:**
@@ -187,6 +190,9 @@ This project uses a native iperf3 binary for network testing. Due to Android's S
 6. Make extracted binaries executable with `setExecutable(true, false)`
 
 **SELinux Note:** Android uses SELinux which restricts process execution. On Android 10+, files in app data directories cannot be executed directly. For a complete solution, see CellularLab repo (https://github.com/Abhi5h3k/CellularLab) which uses CMake + JNI to compile iperf3's C code as a shared library, bypassing SELinux restrictions.
+
+### I have found an easy way to configure an Android emulator to disable SELinux
+- https://github.com/CS683/project-jerryabramson/blob/main/Code/Iperf3_network_tester/IPERF3_EXE.md
 
 **Future Enhancement (Course Project):**
 - Work with CellularLab repo to enhance user interface

@@ -9,6 +9,7 @@ plugins {
 
 android {
     compileSdk = 36
+    ndkVersion = "28.1.13356709"
 
     defaultConfig {
         applicationId = "edu.bu.cs683_jabramson_project.iperf3_network_tester"
@@ -17,6 +18,15 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        buildToolsVersion = "36.0.0"
+
+        // ✅ Required for native builds
+        externalNativeBuild {
+            cmake {
+                cFlags += listOf("-std=c11", "-D__STDC_NO_ATOMICS__=0")
+
+            }
+        }
 
         // Move abiFilters inside ndk block
         ndk {
@@ -51,6 +61,12 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.28.0"
+        }
     }
     buildFeatures {
         compose = true

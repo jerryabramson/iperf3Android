@@ -5,9 +5,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import edu.bu.cs683_jabramson_project.iperf3_network_tester.Constants
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3ResultsData
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.runner.iperf3Runner
@@ -93,6 +91,9 @@ class Iperf3RunViewModel @Inject constructor (
                 outputLines = it.outputLines.also { it.clear() })
         }
 
+//        IperfTestManage(updateProgress = ::updateProgress,
+//           myCallback = ::saveOutputLine,
+//            iperf3Parameters = _uiStateFlow.value.iperf3Parameters).startTest()
         var rc = iperf3Runner(
             updateProgress = ::updateProgress,
             callback = ::saveOutputLine,
