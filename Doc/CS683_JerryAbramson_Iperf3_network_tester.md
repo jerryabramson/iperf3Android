@@ -23,8 +23,16 @@ emulator, certain workarounds will be necessary in order to proper run and grade
 ### Continuing research on native execution, SELinux contexts, and sandbox requirements are discussed in detail here:
 - https://github.com/CS683/project-jerryabramson/blob/main/Code/Iperf3_network_tester/AGENTS.md#native-binary-handling-iperf3
 
+1. I did some research on using a native JNI implementation with the iperf3 binaries, based on an existing open-source solution.
+2. Given more time, I will likely be able to utilize this after the course is over.
+3. In the meantime, I have a workable solution for this course project.
+
+
 #### And in even more details here:
 - https://github.com/CS683/project-jerryabramson/blob/main/Code/Iperf3_network_tester/session-ses_2ba1.md
+
+
+- https://github.com/CS683/project-jerryabramson/blob/main/Code/Iperf3_network_tester/IPERF3_EXE.md
 
 
 * For my project I am implementing a network performance monitor based on the iPerf3 protocol.
