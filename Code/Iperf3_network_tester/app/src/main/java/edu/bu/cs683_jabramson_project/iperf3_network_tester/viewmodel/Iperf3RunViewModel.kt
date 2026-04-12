@@ -19,19 +19,24 @@ import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.MonitorIPerf3O
 
 
 
+// Data class to hold the UI state. Notice that
+// all variables unchangeable `val` that are also mutable.
 data class UiData(
     val iperf3Parameters: Iperf3Parameters = Iperf3Parameters(),
+    val iperf3ResultsData: Iperf3ResultsData = Iperf3ResultsData(),
     val outputLines: MutableList<String> = emptyList<String>().toMutableList(),
     val errorLines: MutableList<String> = emptyList<String>().toMutableList(),
-    var latestLine: String = "",
+    val iperf3Messages: MutableList<String> = emptyList<String>().toMutableList(),
+    var hostName: String = "",
+    val latestLine: String = "",
+    val minimumLine: String = "",
+    val maximumLine: String = "",
+    val averageLine: String = "",
     val progress: Float = 0f,
     val isRunning: Boolean = false,
     val isFinished: Boolean = false,
     val returnCode: Int = 0,
-    val lastLine: String = "",
-    val iperf3ResultsData: Iperf3ResultsData = Iperf3ResultsData(),
-    var hostName: String = ""
-
+    val lastLine: String = ""
 )
 
 /**
@@ -47,14 +52,36 @@ class Iperf3RunViewModel @Inject constructor (
 ) : ViewModel() {
 
     //private val projId: String? = savedStateHandle[Constants.PROJECT_STATE]
-    val iperf3Parameters: Iperf3Parameters = Iperf3Parameters()
+
+    val tag = "Iperf3RunViewModel"
+    private val iperf3Parameters: Iperf3Parameters = Iperf3Parameters()
+    private val iperf3ResultsData: Iperf3ResultsData = Iperf3ResultsData()
     private val _uiStateFlow = MutableStateFlow(UiData(iperf3Parameters))
     val uiStateFlow: StateFlow<UiData> = _uiStateFlow.asStateFlow()
 
-    //private val iperf3ResultsData = Iperf3ResultsData()
 
+    // initialization
     init {
-        Log.d("Iperf3Runner: ", "init")
+        Log.d(tag, "initialize")
+        _uiStateFlow.update {
+            it.copy(
+                iperf3Parameters = iperf3Parameters,
+                iperf3ResultsData = iperf3ResultsData,
+                outputLines = emptyList<String>().toMutableList(),
+                errorLines = emptyList<String>().toMutableList(),
+                iperf3Messages = emptyList<String>().toMutableList(),
+                hostName = "",
+                latestLine = "",
+                minimumLine = "",
+                maximumLine = "",
+                averageLine = "",
+                progress = 0f,
+                isRunning = false,
+                isFinished = false,
+                returnCode = 0,
+                lastLine = ""
+            )
+        }
     }
 
 
@@ -62,18 +89,19 @@ class Iperf3RunViewModel @Inject constructor (
     fun saveOutputLine(aLine: String) {
         val formattedResult: String = MonitorIPerf3Output.processLine(aLine)
         if (!formattedResult.isEmpty()) {
-            Log.d("formattedOutput: ", "stdout: $formattedResult")
+            Log.d(tag, "stdout: $formattedResult")
             _uiStateFlow.update {
                 it.copy(
                     lastLine = it.latestLine,
                     latestLine = formattedResult,
                     outputLines = it.outputLines.also { it.add(formattedResult) },
+                    iperf3Messages = MonitorIPerf3Output.getIperf3Messages().toMutableList()
                 )
             }
         }
     }
     fun saveErrorLine(aLine: String) {
-            Log.d("stderr: ", "stdout: $aLine")
+            Log.d(tag, "stderr: $aLine")
             _uiStateFlow.update {
                 it.copy(
                     errorLines = it.errorLines.also { it.add(aLine) },
@@ -82,42 +110,67 @@ class Iperf3RunViewModel @Inject constructor (
         }
 
     fun launch() {
+
+        // Prepare the iperf3 parameters. The default hostname is 'jabramson.com'
         if (_uiStateFlow.value.hostName.isEmpty()) _uiStateFlow.value.hostName = "jabramson.com"
-        val coroutineScope = viewModelScope
-        uiStateFlow.value.errorLines.clear()
-        uiStateFlow.value.outputLines.clear()
         _uiStateFlow.value.iperf3Parameters.serverHost = _uiStateFlow.value.hostName
-        val coroutineContext = coroutineScope.coroutineContext
+
+        // Update the UI state to show that the test is about to run
         _uiStateFlow.update {
             it.copy(isRunning = true,
                 isFinished = false,
                 outputLines = it.outputLines.also { it.clear() },
-                errorLines = it.outputLines.also { it.clear() })
-        }
-        _uiStateFlow.value.errorLines.clear()
-        var rc = 0
-        coroutineScope.launch(coroutineContext) {
-            rc = runIperf3()
-        }
-        _uiStateFlow.update {
-            it.copy(returnCode = rc,
-                isRunning = false,
-                isFinished = true,
-                hostName = ""
-                //outputLines = it.outputLines.also { it.clear() }
+                errorLines = it.errorLines.also { it.clear() },
+                iperf3Messages = it.iperf3Messages.also { it.clear() }
             )
         }
+
+        Log.d(tag, "Async Launch Started")
+        viewModelScope.launch {
+            // Run the iperf3 binary asynchronously.
+            runIperf3()
+        }
+        Log.d(tag, "Async Launch Completed")
+
     }
 
+    // Run the iperf3 binary.
+    // Must be a suspend function called from a coroutine.
     suspend fun runIperf3(): Int {
+        var rc = -1
 
+        try {
+            // Run the iperf3 binary with the provided parameters.
+            MonitorIPerf3Output.resetGathered()
+            rc = iperf3Runner(
+                updateProgress = ::updateProgress,
+                stdout = ::saveOutputLine,
+                stderr = ::saveErrorLine,
+                iperf3Parameters = _uiStateFlow.value.iperf3Parameters
+            )
+        } catch (e: Exception) {
+            Log.e(tag, "Failed to run iperf3: ${e.message}", e)
+            saveErrorLine("Failed to run iperf3: ${e.message}")
+            rc = -1
+        }
 
-        val rc = iperf3Runner(
-            updateProgress = ::updateProgress,
-            stdout = ::saveOutputLine,
-            stderr = ::saveErrorLine,
-            iperf3Parameters = _uiStateFlow.value.iperf3Parameters
-        )
+        // Update the UI state to show that the test is finished.
+        // Provide the return code to the UI.
+        // Clear the hostName field for the UI.
+        _uiStateFlow.update {
+            it.copy(
+                returnCode = rc,
+                isRunning = false,
+                isFinished = true,
+                hostName = "",
+                maximumLine = MonitorIPerf3Output.getMaximumBitsBytesPerSec(),
+                minimumLine = MonitorIPerf3Output.getMinimumBitsBytesPerSec(),
+                averageLine = MonitorIPerf3Output.getAverageBitsBytesPerSec(),
+                iperf3Messages = MonitorIPerf3Output.getIperf3Messages().toMutableList()
+            )
+        }
+
+        Log.d(tag, "runIperf3 Completed, return code: $rc")
         return rc
     }
 
@@ -142,7 +195,10 @@ class Iperf3RunViewModel @Inject constructor (
 
     fun updateHostName(host: String) {
         _uiStateFlow.update {
-            it.copy(hostName = host )// iperf3Parameters = it.iperf3Parameters.copy(serverHost = host))
+            it.copy(
+                hostName = host,
+                iperf3Parameters = iperf3Parameters.copy(serverHost = host)
+            )
         }
     }
 

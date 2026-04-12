@@ -3,8 +3,8 @@ package edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme
 import androidx.compose.ui.graphics.Color
 
 
-val RedError = Color(0xFFFF0000)
-
+val RedError = Color(0xFFF00000)
+val YellowError = Color(0xFFFFDD00)
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)

@@ -65,23 +65,15 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
         viewModel.setupIperf3Parameters(iperf3Parameters)
         viewModel.setTimeout(3000)
         viewModel.setDuration(10)
+        viewModel.setReverse(true)
 
         // 2️⃣ Build a TextStyle that uses the font
         val mesloMonoStyle = TextStyle(
             fontFamily = mesloFontFamily(),
-            fontSize = 14.sp,
+            fontSize = 18.sp,
             letterSpacing = 0.2.sp,
             color = MaterialTheme.colorScheme.onSurface
         )   // optional tweak for monospace readability
-
-        // 2️⃣ Build a TextStyle that uses the font
-        val mesloErrorStyle = TextStyle(
-            fontFamily = mesloFontFamily(),
-            fontSize = 14.sp,
-            letterSpacing = 0.2.sp,
-            color = MaterialTheme.colorScheme.onError
-        )   // optional tweak for monospace readability
-
 
         // -------------------------------------------------------------------------
         // UI State
@@ -92,7 +84,7 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
         val ip = uiState.iperf3Parameters.iperf3Binary.absolutePath
         Scaffold(
             topBar = {
-                TopAppBar(title = { Text("iperf3") })
+                TopAppBar(title = { Text("iperf3 Performance Tester") })
             }
         ) { padding ->
             Column(
@@ -101,19 +93,11 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                     .padding(16.dp)
             ) {
                 Text(
-                    text = "binary: '$ip'",
-                    color = MaterialTheme.colorScheme.onError
+                    text = "iperf3 binary: $ip",
+                    color = MaterialTheme.colorScheme.onError,
+                    fontSize = 15.sp,
                 )
                 val prompt = "Host Name or IP Address"
-                if (uiState.isFinished) {
-                    Text(
-                        "return Code: ${uiState.returnCode}",
-                        modifier = Modifier.padding(16.dp),
-                        textAlign = TextAlign.Left,
-                        fontSize = 18.sp
-                    )
-                }
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -162,7 +146,50 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                if (!uiState.isRunning && uiState.isFinished) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Tested for ${uiState.iperf3Parameters.durationSecs} second(s)",
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontSize = 18.sp
+                    )
+
+                    var color = MaterialTheme.colorScheme.primary
+                    if (uiState.returnCode != 0) color = MaterialTheme.colorScheme.onError
+                    Text(
+                        "Return Code: ${uiState.returnCode}",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Left,
+                        fontSize = 24.sp,
+                        color = color
+                    )
+                    if (uiState.returnCode == 0) {
+                        Text("Average: ${uiState.averageLine}",
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Left,
+                            modifier = Modifier.fillMaxWidth(),
+                            fontSize = 24.sp)
+                        Text(
+                            "Maximum: ${uiState.maximumLine}",
+                            color = MaterialTheme.colorScheme.secondary,
+                            textAlign = TextAlign.Left,
+                            modifier = Modifier.fillMaxWidth(),
+                            fontSize = 24.sp
+                        )
+                        Text(
+                            "Minimum: ${uiState.minimumLine}",
+                            color = MaterialTheme.colorScheme.tertiary,
+                            textAlign = TextAlign.Left,
+                            modifier = Modifier.fillMaxWidth(),
+                            fontSize = 24.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
+                }
 
                 if (uiState.isRunning) {
                     Column(
@@ -170,17 +197,23 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            "Testing for 10 seconds against remote host ${uiState.iperf3Parameters.serverHost}",
+                            "Testing for ${uiState.iperf3Parameters.durationSecs} second(s)",
                             modifier = Modifier
                                 .padding(8.dp)
                                 .fillMaxWidth(),
                             textAlign = TextAlign.Center,
                             fontSize = 18.sp
                         )
+                        Text("Remote host ${uiState.hostName}",
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 18.sp)
 
                         LinearProgressIndicator(
                             progress = { uiState.progress },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().height(16.dp),
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.surfaceVariant,
                             strokeCap = ProgressIndicatorDefaults.LinearStrokeCap,
@@ -210,18 +243,43 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider(
                     modifier = Modifier.fillMaxWidth(),
                     thickness = 4.dp,
                     color = MaterialTheme.colorScheme.primary
                 )
 
+                if (uiState.iperf3Messages.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                        items(uiState.iperf3Messages.size) { index ->
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = uiState.iperf3Messages[index],
+                                    textAlign = TextAlign.Left,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                )
+                            }
+                        }
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        thickness = 4.dp,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+
+                }
+
+
                 // Show the accumulated lines in a lazy list
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     items(uiState.outputLines.size) { index ->
                         Row(modifier = Modifier.fillMaxWidth()) {
                             Text(
-                                text = uiState.outputLines.get(index),
+                                text = uiState.outputLines[index],
                                 textAlign = TextAlign.Left,
                                 modifier = Modifier
                                     .fillMaxWidth(),
@@ -232,28 +290,29 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                 }
 
 
-//                //  if (uiState.errorLines.isNotEmpty()) {
-//                Spacer(modifier = Modifier.height(24.dp))
-//                HorizontalDivider(
-//                    modifier = Modifier.fillMaxWidth(),
-//                    thickness = 4.dp,
-//                    color = MaterialTheme.colorScheme.onError
-//                )
-//                Spacer(modifier = Modifier.height(24.dp))
-//                // Show the accumulated lines in a lazy list
-//                LazyColumn(modifier = Modifier.fillMaxWidth()) {
-//                    items(uiState.errorLines.size) { index ->
-//                        Row(modifier = Modifier.fillMaxWidth()) {
-//                            Text(
-//                                text = uiState.errorLines.get(index),
-//                                color = MaterialTheme.colorScheme.onError,
-//                                textAlign = TextAlign.Left,
-//                                modifier = Modifier
-//                                    .fillMaxWidth()
-//                            )
-//                        }
-//                    }
-//                }
+                if (uiState.errorLines.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        thickness = 4.dp,
+                        color = MaterialTheme.colorScheme.onError
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    // Show the accumulated lines in a lazy list
+                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                        items(uiState.errorLines.size) { index ->
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = uiState.errorLines.get(index),
+                                    color = MaterialTheme.colorScheme.onError,
+                                    textAlign = TextAlign.Left,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 

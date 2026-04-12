@@ -4,6 +4,9 @@
  */
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.utils;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  *
  * @author jerry
@@ -19,18 +22,34 @@ class ConnectDetails {
     String timeout = "";
     String lastResult = "";
     int resultEntry = 0;
+    List<String> iperf3Messages = new ArrayList<>();
     double maxBitsBytesPerSec = Double.MIN_VALUE;
+    String maxBitsBytesPerSecUnit = "";
     double minBitsBytesPerSec = Double.MAX_VALUE;
+    String minBitsBytesPerSecUnit = "";
+    double avgBitsBytesPerSec = 0;
+    String avgBitsBytesPerSecUnit = "";
     boolean summaryResults = false;
     boolean finished = false;
     boolean lastOmitted = false;
     boolean isSingleThread = true;
 
     public void setMaxBitsBytesPerSec(double maxBitsBytesPerSec, String unit) {
-        if (maxBitsBytesPerSec > this.maxBitsBytesPerSec) this.maxBitsBytesPerSec = maxBitsBytesPerSec;
+        if (maxBitsBytesPerSec > this.maxBitsBytesPerSec) {
+            this.maxBitsBytesPerSec = maxBitsBytesPerSec;
+            this.maxBitsBytesPerSecUnit = unit;
+        }
     }
     public void setMinBitsBytesPerSec(double minBitsBytesPerSec, String unit) {
-        if (minBitsBytesPerSec < this.minBitsBytesPerSec) this.minBitsBytesPerSec = minBitsBytesPerSec;
+        if (minBitsBytesPerSec < this.minBitsBytesPerSec) {
+            this.minBitsBytesPerSec = minBitsBytesPerSec;
+            this.minBitsBytesPerSecUnit = unit;
+        }
+    }
+
+    public void setAvgBitsBytesPerSec(double avgBitsBytesPerSec, String unit) {
+        this.avgBitsBytesPerSec = avgBitsBytesPerSec;
+        this.avgBitsBytesPerSecUnit = unit;
     }
 }
 public class MonitorIPerf3Output {
@@ -38,6 +57,39 @@ public class MonitorIPerf3Output {
     private static final String WORD_DELIMITER_RE = "[ \t]++";
     protected static final int leftColumnMarker = 30;
     protected static int  rightColumnMarker;
+
+    public static String getMaximumBitsBytesPerSec() {
+        return conn.maxBitsBytesPerSec + " " + conn.maxBitsBytesPerSecUnit;
+    }
+
+    public static String getMinimumBitsBytesPerSec() {
+        return conn.minBitsBytesPerSec + " " + conn.minBitsBytesPerSecUnit;
+    }
+
+    public static String getAverageBitsBytesPerSec() {
+        return conn.avgBitsBytesPerSec + " " + conn.avgBitsBytesPerSecUnit;
+    }
+
+    public static List<String> getIperf3Messages() {
+        return conn.iperf3Messages;
+    }
+
+    public static void resetGathered() {
+        conn.gathered = false;
+        conn.iperf3Messages.clear();
+        conn.lastResult = "";
+        conn.resultEntry = 0;
+        conn.finished = false;
+        conn.summaryResults = false;
+        conn.lastOmitted = false;
+        conn.isSingleThread = true;
+        conn.maxBitsBytesPerSec = Double.MIN_VALUE;
+        conn.minBitsBytesPerSec = Double.MAX_VALUE;
+        conn.avgBitsBytesPerSec = 0;
+        conn.maxBitsBytesPerSecUnit = "";
+        conn.minBitsBytesPerSecUnit = "";
+        conn.avgBitsBytesPerSecUnit = "";
+    }
 
     public static String processLine(String line) {
         String output = "";
@@ -91,7 +143,7 @@ public class MonitorIPerf3Output {
                     if (!sendOrReceive.toLowerCase().contains("sender") && !sendOrReceive.toLowerCase().contains("receiv") && !sendOrReceive.toLowerCase().contains("omit")) {
                         sendOrReceive = "";
                     }
-                    String time = "Running  ";
+                    String time = "Running";
                     boolean done = false;
                     if (ID.contains("SUM") || conn.isSingleThread) {
                         double bitRateValue = -1;
@@ -102,16 +154,17 @@ public class MonitorIPerf3Output {
                         }
                         switch (sendOrReceive.toLowerCase()) {
                             case "(omitted)":
-                                time = "   Skipping ";
+                                time = "   Skipping";
                                 conn.lastOmitted = true;
                                 break;
                             case "sender":
                             case "receiver":
                                 conn.lastOmitted = false;
-                                if (conn.finished) {
+                                if (!conn.finished) {
                                     conn.finished = true;
-                                    time = "Results:   ";
+                                    time = "Results\n";
                                     conn.summaryResults = true;
+                                    conn.setAvgBitsBytesPerSec(bitRateValue, bitRateUnit);
                                 } else {
                                     time = "";
                                     done = true;
@@ -123,7 +176,7 @@ public class MonitorIPerf3Output {
                                 sendOrReceive = "";
                         }
 
-                        output = time + " " + interval + " " + sendOrReceive + " " + bitRate + " " + bitRateUnit + " " + sendOrReceive;
+                        output = time + " " + interval + " " + sendOrReceive + " " + bitRate + " " + bitRateUnit;
                         return output;
                     }
                 }
@@ -132,7 +185,7 @@ public class MonitorIPerf3Output {
             if (!line.startsWith("- -") &&
                     !line.toLowerCase().contains("iperf done") &&
                     !line.trim().isEmpty()) {
-                output = line;
+                conn.iperf3Messages.add(line);
             }
         }
         return output;

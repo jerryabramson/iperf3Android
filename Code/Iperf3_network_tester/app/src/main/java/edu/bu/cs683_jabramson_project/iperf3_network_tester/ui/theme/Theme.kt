@@ -22,7 +22,7 @@ import androidx.compose.ui.platform.LocalContext
     primary = Purple40,
     secondary = PurpleGrey40,
     tertiary = Pink40,
-    onError = RedError
+    onError = YellowError
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -42,10 +42,11 @@ fun Iperf3NetworkTesterTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            /*if (darkTheme)*/ dynamicDarkColorScheme(context)/* else dynamicLightColorScheme(context)*/
         }
 
         darkTheme -> DarkColorScheme
