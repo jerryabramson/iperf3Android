@@ -5,9 +5,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import edu.bu.cs683_jabramson_project.iperf3_network_tester.Constants
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3ResultsData
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.runner.iperf3Runner
@@ -26,7 +24,6 @@ data class UiData(
     val outputLines: MutableList<String> = emptyList<String>().toMutableList(),
     val errorLines: MutableList<String> = emptyList<String>().toMutableList(),
     var latestLine: String = "",
-    val errors: MutableList<String> = emptyList<String>().toMutableList(),
     val progress: Float = 0f,
     val isRunning: Boolean = false,
     val isFinished: Boolean = false,
@@ -75,29 +72,33 @@ class Iperf3RunViewModel @Inject constructor (
             }
         }
     }
+    fun saveErrorLine(aLine: String) {
+            Log.d("stderr: ", "stdout: $aLine")
+            _uiStateFlow.update {
+                it.copy(
+                    errorLines = it.errorLines.also { it.add(aLine) },
+                )
+            }
+        }
 
     fun launch() {
         if (_uiStateFlow.value.hostName.isEmpty()) _uiStateFlow.value.hostName = "jabramson.com"
         val coroutineScope = viewModelScope
+        uiStateFlow.value.errorLines.clear()
+        uiStateFlow.value.outputLines.clear()
         _uiStateFlow.value.iperf3Parameters.serverHost = _uiStateFlow.value.hostName
         val coroutineContext = coroutineScope.coroutineContext
-        coroutineScope.launch(coroutineContext) {
-            runIperf3()
-        }
-    }
-
-    suspend fun runIperf3() {
         _uiStateFlow.update {
             it.copy(isRunning = true,
                 isFinished = false,
-                outputLines = it.outputLines.also { it.clear() })
+                outputLines = it.outputLines.also { it.clear() },
+                errorLines = it.outputLines.also { it.clear() })
         }
-
-        var rc = iperf3Runner(
-            updateProgress = ::updateProgress,
-            callback = ::saveOutputLine,
-            iperf3Parameters = _uiStateFlow.value.iperf3Parameters
-        )
+        _uiStateFlow.value.errorLines.clear()
+        var rc = 0
+        coroutineScope.launch(coroutineContext) {
+            rc = runIperf3()
+        }
         _uiStateFlow.update {
             it.copy(returnCode = rc,
                 isRunning = false,
@@ -106,7 +107,18 @@ class Iperf3RunViewModel @Inject constructor (
                 //outputLines = it.outputLines.also { it.clear() }
             )
         }
+    }
 
+    suspend fun runIperf3(): Int {
+
+
+        val rc = iperf3Runner(
+            updateProgress = ::updateProgress,
+            stdout = ::saveOutputLine,
+            stderr = ::saveErrorLine,
+            iperf3Parameters = _uiStateFlow.value.iperf3Parameters
+        )
+        return rc
     }
 
     fun setupIperf3Parameters(ip: Iperf3Parameters) {

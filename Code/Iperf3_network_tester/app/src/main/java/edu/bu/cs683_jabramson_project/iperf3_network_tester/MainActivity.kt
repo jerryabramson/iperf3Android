@@ -16,6 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme.Iperf3NetworkTesterTheme
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getIperf3Binary
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.view.RunIperf3Screen
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.view.StubbedIperf3Screen
@@ -46,6 +47,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun NavGraph(iperf3Binary: File) {
+
     val navController = rememberNavController()
     NavHost(
         navController = navController,
