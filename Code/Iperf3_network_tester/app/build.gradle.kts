@@ -57,6 +57,31 @@ android {
     }
 }
 
+// ======================
+// CUSTOM DEPLOY HOOK (KOTLIN DSL)
+// ======================
+
+// 1. Define the Exec task (runs your shell script)
+val deployPrepScript by tasks.register(Exec::class) {
+    // Path to your script (relative to project root)
+    // NOTE: Uses projectDir for safe path resolution in Kotlin DSL
+    commandLine = listOf(
+        "$projectDir/scripts/pre-deploy.sh".toString()
+    )
+
+    // Optional: Pass emulator serial number (if needed)
+    // commandLine = listOf(
+    //     "$projectDir/scripts/pre-deploy.sh".toString(),
+    //     System.getenv("ANDROID_SERIAL")
+    // )
+}
+
+// 2. Make 'installDebug' (used by AS Run button) depend on your script
+//    This runs your script BEFORE installing the APK to emulator/device
+tasks.named("installDebug") {
+    dependsOn(deployPrepScript)
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
