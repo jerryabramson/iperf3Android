@@ -8,7 +8,8 @@
 - `CLAUDE.md` - Detailed architecture, usage, and known issues
 
 ## Working with the Android Project
-All development commands must be run from the project directory:
+The Android project is located in the `Code/Iperf3_network_tester` directory.
+All development commands must be run from this directory:
 ```bash
 cd Code/Iperf3_network_tester
 ```
@@ -45,6 +46,11 @@ Due to Android 10+ SELinux restrictions, executing binaries from app data is blo
 
 #### Verification Order
 When making changes: `lint -> test` (or specific variant tests)
+
+### Emulator Task
+- `./gradlew startEmulator` - Starts the Pixel 6 API 36.0 emulator in the background and prints its PID.
+  The emulator can be used for running tests or manual testing.
+  Note: The emulator may take a minute to boot fully. The `connectedAndroidTest` task will wait for a device to be online.
 
 ### Device Setup & Binary Deployment
 1. Ensure device has USB debugging enabled and is visible via `adb devices`

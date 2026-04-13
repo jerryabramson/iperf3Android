@@ -75,20 +75,26 @@ public class MonitorIPerf3Output {
     }
 
     public static void resetGathered() {
+        conn.localHost = "";
+        conn.remoteHost = "";
+        conn.localPort = -1L;
+        conn.remotePort = -1L;
         conn.gathered = false;
-        conn.iperf3Messages.clear();
+        conn.connectedString = "";
+        conn.timeout = "";
         conn.lastResult = "";
         conn.resultEntry = 0;
-        conn.finished = false;
+        conn.iperf3Messages.clear();
+        conn.maxBitsBytesPerSec = Double.MIN_VALUE;
+        conn.maxBitsBytesPerSecUnit = "";
+        conn.minBitsBytesPerSec = Double.MAX_VALUE;
+        conn.minBitsBytesPerSecUnit = "";
+        conn.avgBitsBytesPerSec = 0;
+        conn.avgBitsBytesPerSecUnit = "";
         conn.summaryResults = false;
+        conn.finished = false;
         conn.lastOmitted = false;
         conn.isSingleThread = true;
-        conn.maxBitsBytesPerSec = Double.MIN_VALUE;
-        conn.minBitsBytesPerSec = Double.MAX_VALUE;
-        conn.avgBitsBytesPerSec = 0;
-        conn.maxBitsBytesPerSecUnit = "";
-        conn.minBitsBytesPerSecUnit = "";
-        conn.avgBitsBytesPerSecUnit = "";
     }
 
     public static String processLine(String line) {
