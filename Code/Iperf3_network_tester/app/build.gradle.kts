@@ -1,9 +1,12 @@
+import java.nio.file.Paths
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
-
     id("com.google.devtools.ksp")
+
 }
 
 
@@ -57,29 +60,43 @@ android {
     }
 }
 
-// ======================
-// CUSTOM DEPLOY HOOK (KOTLIN DSL)
-// ======================
+
 
 // 1. Define the Exec task (runs your shell script)
-val deployPrepScript by tasks.register(Exec::class) {
-    // Path to your script (relative to project root)
-    // NOTE: Uses projectDir for safe path resolution in Kotlin DSL
-    commandLine = listOf(
-        "$projectDir/scripts/pre-deploy.sh".toString()
-    )
+val deployPrepScript by tasks.register("deployPrepScript", Exec::class.java) {
+    val rootDir = project.rootDir
+    val localProperties = File(rootDir, "local.properties")
+    if (localProperties.exists()) {
+        val properties: Properties = Properties()
+        localProperties.inputStream().use {
+            properties.load(it)
+            var sdkDir = properties.getProperty("sdk.dir")
+            val exeName = if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
+                "adb.exe"
 
-    // Optional: Pass emulator serial number (if needed)
-    // commandLine = listOf(
-    //     "$projectDir/scripts/pre-deploy.sh".toString(),
-    //     System.getenv("ANDROID_SERIAL")
-    // )
+            } else {
+                "adb"
+            }
+            val scriptName = if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
+                "pre-deploy.bat"
+            } else {
+                "pre-deploy.sh"
+            }
+            var adb = "$sdkDir/platform-tools/$exeName"
+            var scriptExecutable = Paths.get("$projectDir", "scripts", scriptName)
+            commandLine = listOf(scriptExecutable.toString())
+            environment("ANDROID_HOME", sdkDir)
+            environment("ADB_EXECUTABLE", adb)
+        }
+    }
 }
 
 // 2. Make 'installDebug' (used by AS Run button) depend on your script
 //    This runs your script BEFORE installing the APK to emulator/device
-tasks.named("installDebug") {
-    dependsOn(deployPrepScript)
+afterEvaluate {
+    tasks.named("assembleDebug") {
+        dependsOn(deployPrepScript)
+    }
 }
 
 dependencies {
@@ -128,6 +145,7 @@ dependencies {
     // Optional: Room Kotlin Extensions (recommended for Kotlin)
     implementation(libs.androidx.room.ktx)
 }
+
 
 // ⚠️ CRITICAL: Add this resolution strategy OUTSIDE android/dependencies blocks
 configurations.all {

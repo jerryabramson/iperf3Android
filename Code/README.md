@@ -7,30 +7,53 @@ All code should be stored in this folder.
 
 ## Top Level
 ```
+
 Iperf3_network_tester/
-    ├── app/
-    ├── build.gradle.kts
-    ├── gradle/
-    ├── gradle.properties
-    ├── gradlew*
-    ├── gradlew.bat
-    ├── local.properties
-    └── settings.gradle.kts
+├── AGENTS.md
+├── app
+├── build
+├── build.gradle.kts
+├── commandLineBuildApp.md
+├── gradle
+├── gradle.properties
+├── gradlew
+├── gradlew.bat
+├── IPERF3_EXE.md
+├── local.properties
+├── planning.md
+├── README.md
+├── session-ses_2ba1.md
+└── settings.gradle.kts
 ```
 ## Code Level
 ```
-[7.7k]  Iperf3_network_tester/app/src/main/java/
-└── [7.6k]  edu
-    └── [7.5k]  bu
-        └── [7.3k]  cs683_jabramson_project
-            └── [7.2k]  iperf3_network_tester
-                ├── [2.1k]  Iperf3NetworkHost.kt
-                ├── [1.6k]  MainActivity.kt
-                └── [3.3k]  ui
-                    └── [3.2k]  theme
-                        ├── [ 316]  Color.kt
-                        ├── [1.7k]  Theme.kt
-                        └── [1.0k]  Type.kt
+Iperf3_network_tester/app/src/main/java/
+└── edu
+    └── bu
+        └── cs683_jabramson_project
+            └── iperf3_network_tester
+                ├── Constants.kt
+                ├── Iperf3Application.kt
+                ├── MainActivity.kt
+                ├── model
+                │   ├── Iperf3Parameters.kt
+                │   └── Iperf3ResultsData.kt
+                ├── runner
+                │   └── iperf3Runner.kt
+                ├── ui
+                │   └── theme
+                │       ├── Color.kt
+                │       ├── mesloFontFamily.kt
+                │       ├── Theme.kt
+                │       └── Type.kt
+                ├── utils
+                │   ├── findIperf3Binary.kt
+                │   └── MonitorIPerf3Output.java
+                ├── view
+                │   ├── Iperf3View.kt
+                │   └── StubbedIperf3View.kt
+                └── viewmodel
+                    └── Iperf3RunViewModel.kt
 ```
 ## Test Level
 ```
@@ -53,3 +76,21 @@ Iperf3_network_tester/
                     └── [ 731]  ExampleInstrumentedTest.kt
 ```
 
+Iperf3_network_tester/
+├── AGENTS.md
+├── app
+├── build
+├── build.gradle.kts
+├── commandLineBuildApp.md
+├── gradle
+├── gradle.properties
+├── gradlew
+├── gradlew.bat
+├── IPERF3_EXE.md
+├── local.properties
+├── planning.md
+├── README.md
+├── session-ses_2ba1.md
+└── settings.gradle.kts
+
+4 directories, 12 files
