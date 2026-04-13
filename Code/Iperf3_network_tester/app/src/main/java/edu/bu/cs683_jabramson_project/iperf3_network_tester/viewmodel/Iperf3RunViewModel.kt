@@ -111,9 +111,9 @@ class Iperf3RunViewModel @Inject constructor (
 
     fun launch() {
 
-        // Prepare the iperf3 parameters. The default hostname is the IP address for 'jabramson.com'
+        // Prepare the iperf3 parameters. The default hostname is 'jabramson.com'
         // 72.65.115.120
-        if (_uiStateFlow.value.hostName.isEmpty()) _uiStateFlow.value.hostName = "72.65.115.120"
+        if (_uiStateFlow.value.hostName.isEmpty()) _uiStateFlow.value.hostName = "jabramson.com"
         _uiStateFlow.value.iperf3Parameters.serverHost = _uiStateFlow.value.hostName
 
         // Update the UI state to show that the test is about to run
