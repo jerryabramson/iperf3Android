@@ -82,7 +82,7 @@ val deployPrepScript by tasks.register("deployPrepScript", Exec::class.java) {
             } else {
                 "pre-deploy.sh"
             }
-            var adb = "$sdkDir/platform-tools/$exeName"
+            var adb = Paths.get(sdkDir, "platform-tools", exeName)
             var scriptExecutable = Paths.get("$projectDir", "scripts", scriptName)
             commandLine = listOf(scriptExecutable.toString())
             environment("ANDROID_HOME", sdkDir)

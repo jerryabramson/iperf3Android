@@ -1,5 +1,4 @@
 #!/bin/bash
-exec >../pre-deploy.log 2>&1
 date
 echo "Running pre-deploy script for emulator/device..."
 echo "\$ANDROID_HOME='$ANDROID_HOME'"
