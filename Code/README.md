@@ -28,6 +28,7 @@ Iperf3_network_tester/
 ## Code Level
 ```
 Iperf3_network_tester/app/src/main/java/
+app/src/main/java
 └── edu
     └── bu
         └── cs683_jabramson_project
@@ -50,10 +51,11 @@ Iperf3_network_tester/app/src/main/java/
                 │   ├── findIperf3Binary.kt
                 │   └── MonitorIPerf3Output.java
                 ├── view
-                │   ├── Iperf3View.kt
-                │   └── StubbedIperf3View.kt
+                │   └── Iperf3View.kt
                 └── viewmodel
                     └── Iperf3RunViewModel.kt
+
+12 directories, 14 files
 ```
 ## Test Level
 ```
