@@ -11,3 +11,8 @@ In order to utilize this application, a suitable version of the iperf3 binary ex
 
 I have provided a small script for this purpose, but the best approach is to follow the instructions here:
 https://github.com/davidBar-On/android-iperf3/
+
+A Youtube channel is setup and the iteration 2 and final iterations will be available in an public, unlisted, format.
+
+Iteration 2 is here:
+https://youtu.be/GRAyHRHeX54
