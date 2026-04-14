@@ -24,7 +24,10 @@ Iperf3_network_tester/
 ├── README.md
 ├── session-ses_2ba1.md
 └── settings.gradle.kts
+
+4 directories, 12 files
 ```
+
 ## Code Level
 ```
 Iperf3_network_tester/app/src/main/java/
@@ -77,22 +80,3 @@ app/src/main/java
                 └── [ 827]  iperf3_network_tester
                     └── [ 731]  ExampleInstrumentedTest.kt
 ```
-
-Iperf3_network_tester/
-├── AGENTS.md
-├── app
-├── build
-├── build.gradle.kts
-├── commandLineBuildApp.md
-├── gradle
-├── gradle.properties
-├── gradlew
-├── gradlew.bat
-├── IPERF3_EXE.md
-├── local.properties
-├── planning.md
-├── README.md
-├── session-ses_2ba1.md
-└── settings.gradle.kts
-
-4 directories, 12 files
