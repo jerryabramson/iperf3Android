@@ -34,6 +34,7 @@ data class UiData(
     val averageLine: String = "",
     val progress: Float = 0f,
     val isRunning: Boolean = false,
+    val isDebugging: Boolean = false,
     val isFinished: Boolean = false,
     val returnCode: Int = 0,
     val lastLine: String = ""
@@ -78,6 +79,7 @@ class Iperf3RunViewModel @Inject constructor (
                 progress = 0f,
                 isRunning = false,
                 isFinished = false,
+                isDebugging = false,
                 returnCode = 0,
                 lastLine = ""
             )
@@ -101,16 +103,15 @@ class Iperf3RunViewModel @Inject constructor (
         }
     }
     fun saveErrorLine(aLine: String) {
-            Log.d(tag, "stderr: $aLine")
-            _uiStateFlow.update {
-                it.copy(
-                    errorLines = it.errorLines.also { it.add(aLine) },
-                )
-            }
+        Log.d(tag, "stderr: $aLine")
+        _uiStateFlow.update {
+            it.copy(
+                errorLines = it.errorLines.also { it.add(aLine) },
+            )
         }
+    }
 
     fun launch() {
-
         // Prepare the iperf3 parameters. The default hostname is 'jabramson.com'
         // 72.65.115.120
         if (_uiStateFlow.value.hostName.isEmpty()) _uiStateFlow.value.hostName = "jabramson.com"
@@ -138,8 +139,7 @@ class Iperf3RunViewModel @Inject constructor (
     // Run the iperf3 binary.
     // Must be a suspend function called from a coroutine.
     suspend fun runIperf3(): Int {
-        var rc = -1
-
+        var rc: Int
         try {
             // Run the iperf3 binary with the provided parameters.
             MonitorIPerf3Output.resetGathered()
@@ -191,7 +191,11 @@ class Iperf3RunViewModel @Inject constructor (
     }
 
     fun updateProgress(l: Float) {
-        _uiStateFlow.update { it.copy(progress = l) }
+        var p = l
+        if (_uiStateFlow.value.iperf3Parameters.isReverse) { p = 1.0f - l }
+        _uiStateFlow.update {
+            it.copy(progress = p)
+        }
     }
 
     fun updateHostName(host: String) {
@@ -212,6 +216,12 @@ class Iperf3RunViewModel @Inject constructor (
     fun setReverse(reverse: Boolean) {
         _uiStateFlow.update {
             it.copy(iperf3Parameters = it.iperf3Parameters.copy(isReverse = reverse))
+        }
+    }
+
+    fun setDebug(isDebugging: Boolean) {
+        _uiStateFlow.update {
+            it.copy(isDebugging = isDebugging)
         }
     }
 

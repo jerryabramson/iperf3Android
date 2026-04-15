@@ -46,7 +46,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun NavGraph(iperf3Binary: File) {
-
     val navController = rememberNavController()
     NavHost(
         navController = navController,
