@@ -1,60 +1,64 @@
 All code should be stored in this folder.
 
+# Build instructions
+[Command Line Help](Iperf3_network_tester/commandLineBuildApp.md)
+
+# Source Code Map
+
 ## Top Level
 ```
-.
+
+Iperf3_network_tester/
 ├── AGENTS.md
 ├── app
+├── build
 ├── build.gradle.kts
 ├── commandLineBuildApp.md
 ├── gradle
 ├── gradle.properties
 ├── gradlew
 ├── gradlew.bat
+├── IPERF3_EXE.md
 ├── local.properties
+├── planning.md
 ├── README.md
+├── session-ses_2ba1.md
 └── settings.gradle.kts
+
+4 directories, 12 files
 ```
 
-# Source Code Map
+## Code Level
 ```
+Iperf3_network_tester/app/src/main/java/
 app/src/main/java
 └── edu
     └── bu
         └── cs683_jabramson_project
             └── iperf3_network_tester
+                ├── Constants.kt
+                ├── Iperf3Application.kt
                 ├── MainActivity.kt
                 ├── model
-                ├── RunIperf3Screen.kt
-                ├── StubbedIperf3Screen.kt
+                │   ├── Iperf3Parameters.kt
+                │   └── Iperf3ResultsData.kt
+                ├── runner
+                │   └── iperf3Runner.kt
                 ├── ui
                 │   └── theme
                 │       ├── Color.kt
+                │       ├── mesloFontFamily.kt
                 │       ├── Theme.kt
                 │       └── Type.kt
                 ├── utils
-                │   └── Iperf3Runner.kt
+                │   ├── findIperf3Binary.kt
+                │   └── MonitorIPerf3Output.java
                 ├── view
-                │   └── ProcessOutputScreen.kt
+                │   └── Iperf3View.kt
                 └── viewmodel
-                    └── ProcessRunnerViewModel.kt
+                    └── Iperf3RunViewModel.kt
 
-11 directories, 9 files
-```
-## Code Level
-```
-[7.7k]  Iperf3_network_tester/app/src/main/java/
-└── [7.6k]  edu
-    └── [7.5k]  bu
-        └── [7.3k]  cs683_jabramson_project
-            └── [7.2k]  iperf3_network_tester
-                ├── [2.1k]  Iperf3NetworkHost.kt
-                ├── [1.6k]  MainActivity.kt
-                └── [3.3k]  ui
-                    └── [3.2k]  theme
-                        ├── [ 316]  Color.kt
-                        ├── [1.7k]  Theme.kt
-                        └── [1.0k]  Type.kt
+12 directories, 14 files
 ```
 ## Test Level
 ```
