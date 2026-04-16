@@ -24,6 +24,7 @@ class ConnectDetails {
     String lastResult = "";
     int resultEntry = 0;
     List<String> iperf3Messages = new ArrayList<>();
+    String currentBandwidth = "";
     double maxBitsBytesPerSec = Double.MIN_VALUE;
     String maxBitsBytesPerSecUnit = "";
     double minBitsBytesPerSec = Double.MAX_VALUE;
@@ -49,6 +50,10 @@ class ConnectDetails {
         }
     }
 
+    public void setCurrentBandwidth(String currentBandwidth) {
+        this.currentBandwidth = currentBandwidth;
+    }
+
     public void setAvgBitsBytesPerSec(double avgBitsBytesPerSec, String unit) {
         this.avgBitsBytesPerSec = avgBitsBytesPerSec;
         this.avgBitsBytesPerSecUnit = unit;
@@ -61,17 +66,24 @@ public class MonitorIPerf3Output {
     protected static int  rightColumnMarker;
 
     public static String getMaximumBitsBytesPerSec() {
-        return conn.maxBitsBytesPerSec + " " + conn.maxBitsBytesPerSecUnit;
+        if (conn.maxBitsBytesPerSec > Double.MIN_VALUE)
+            return conn.maxBitsBytesPerSec + " " + conn.maxBitsBytesPerSecUnit;
+        else return "";
     }
 
     public static String getMinimumBitsBytesPerSec() {
-        return conn.minBitsBytesPerSec + " " + conn.minBitsBytesPerSecUnit;
+        if (conn.minBitsBytesPerSec <  Double.MAX_VALUE)
+            return conn.minBitsBytesPerSec + " " + conn.minBitsBytesPerSecUnit;
+        else return "";
     }
 
     public static String getAverageBitsBytesPerSec() {
         return conn.avgBitsBytesPerSec + " " + conn.avgBitsBytesPerSecUnit;
     }
 
+    public static String getCurrentBandwidth() {
+        return conn.currentBandwidth;
+    }
     public static void setSingleThread(boolean isSingleThread) { conn.isSingleThread = isSingleThread; }
     public static void setParallel(int parallel) { conn.parallel = parallel; }
     public static List<String> getIperf3Messages() {
@@ -100,6 +112,7 @@ public class MonitorIPerf3Output {
         conn.connectedString = "";
         conn.timeout = "";
         conn.lastResult = "";
+        conn.currentBandwidth = "";
         conn.resultEntry = 0;
         conn.iperf3Messages.clear();
         conn.maxBitsBytesPerSec = Double.MIN_VALUE;
@@ -156,9 +169,9 @@ public class MonitorIPerf3Output {
             } else {
                 // connIsGathered
                 if (restOfLine.length >= 7) {
-                    String interval = restOfLine[1];
-                    String bitRate = restOfLine[5];
-                    String bitRateUnit = restOfLine[6];
+                    String interval = restOfLine[1].trim();
+                    String bitRate = restOfLine[5].trim();
+                    String bitRateUnit = restOfLine[6].trim();
                     String sendOrReceive = "";
                     if (restOfLine.length > 7) sendOrReceive = restOfLine[7];
                     if (restOfLine.length > 8) sendOrReceive = restOfLine[8];
@@ -178,6 +191,7 @@ public class MonitorIPerf3Output {
                             conn.setMaxBitsBytesPerSec(bitRateValue, bitRateUnit);
                             conn.setMinBitsBytesPerSec(bitRateValue, bitRateUnit);
                         }
+                        conn.setCurrentBandwidth(bitRate + " " + bitRateUnit);
                         switch (sendOrReceive.toLowerCase()) {
                             case "(omitted)":
                                 time = "   Skipping";

@@ -1,9 +1,7 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel
 
 
-import android.R.attr.duration
 import android.util.Log
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,14 +9,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3ResultsData
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.runner.iperf3Runner
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.MonitorIPerf3Output
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Locale.getDefault
 import javax.inject.Inject
-import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.MonitorIPerf3Output
-
 
 
 // Data class to hold the UI state. Notice that
@@ -29,21 +27,26 @@ data class UiData(
     val outputLines: MutableList<String> = emptyList<String>().toMutableList(),
     val errorLines: MutableList<String> = emptyList<String>().toMutableList(),
     val iperf3Messages: MutableList<String> = emptyList<String>().toMutableList(),
+    val results: MutableList<String> = emptyList<String>().toMutableList(),
     var hostName: String = "",
     val latestLine: String = "",
-    val minimumLine: String = "",
-    val maximumLine: String = "",
-    val averageLine: String = "",
+    val bandWidth: String = "",
+    val minimum: String = "",
+    val maximum: String = "",
+    val average: String = "",
     val progress: Float = 0f,
     var durationSecs: String = "",
     var parallelStreams: String = "",
+    var skip: String = "",
     val isRunning: Boolean = false,
     val isDebugging: Boolean = false,
+    val isVerbose: Boolean = false,
     val isFinished: Boolean = false,
     val forceFlush: Boolean = iperf3Parameters.forceFlush,
     val returnCode: Int = 0,
     val lastLine: String = "",
     val isReverse: Boolean = iperf3Parameters.isReverse,
+
 )
 
 /**
@@ -77,19 +80,23 @@ class Iperf3RunViewModel @Inject constructor (
                 outputLines = emptyList<String>().toMutableList(),
                 errorLines = emptyList<String>().toMutableList(),
                 iperf3Messages = emptyList<String>().toMutableList(),
+                results = emptyList<String>().toMutableList(),
                 hostName = "",
                 latestLine = "",
-                minimumLine = "",
-                maximumLine = "",
-                averageLine = "",
+                minimum = "",
+                maximum = "",
+                average = "",
                 progress = 0f,
                 isRunning = false,
                 isFinished = false,
                 isDebugging = false,
+                isVerbose = false,
                 forceFlush = true,
                 returnCode = 0,
                 lastLine = "",
-                durationSecs = ""
+                bandWidth = "",
+                durationSecs = "",
+                skip =  ""
             )
         }
     }
@@ -105,8 +112,12 @@ class Iperf3RunViewModel @Inject constructor (
             _uiStateFlow.update {
                 it.copy(
                     lastLine = it.latestLine,
+                    bandWidth = MonitorIPerf3Output.getCurrentBandwidth(),
                     latestLine = formattedResult,
-                    outputLines = it.outputLines.also { it.add(formattedResult) },
+                    average = MonitorIPerf3Output.getAverageBitsBytesPerSec(),
+                    minimum = MonitorIPerf3Output.getMinimumBitsBytesPerSec(),
+                    maximum = MonitorIPerf3Output.getMaximumBitsBytesPerSec(),
+                    outputLines = it.outputLines.also { if (formattedResult.isNotEmpty()) it.add(formattedResult) },
                     iperf3Messages = it.iperf3Messages.also { it.addAll(lastMessages) }
                 )
             }
@@ -127,6 +138,7 @@ class Iperf3RunViewModel @Inject constructor (
         if (_uiStateFlow.value.hostName.isEmpty()) _uiStateFlow.value.hostName = "jabramson.com"
         if (_uiStateFlow.value.parallelStreams.isEmpty()) _uiStateFlow.value.parallelStreams = "8"
         if (_uiStateFlow.value.durationSecs.isEmpty()) _uiStateFlow.value.durationSecs = "10"
+        if (_uiStateFlow.value.skip.isEmpty()) _uiStateFlow.value.skip = "0"
         _uiStateFlow.value.iperf3Parameters.serverHost = _uiStateFlow.value.hostName
 
         // Update the UI state to show that the test is about to run
@@ -135,7 +147,15 @@ class Iperf3RunViewModel @Inject constructor (
                 isFinished = false,
                 outputLines = it.outputLines.also { it.clear() },
                 errorLines = it.errorLines.also { it.clear() },
-                iperf3Messages = it.iperf3Messages.also { it.clear() }
+                iperf3Messages = it.iperf3Messages.also { it.clear() },
+                results =  it.results.also { it.clear() },
+                bandWidth = "",
+                latestLine = "",
+                minimum = "",
+                maximum = "",
+                average = "",
+                progress = 0f,
+                lastLine = ""
             )
         }
 
@@ -154,6 +174,13 @@ class Iperf3RunViewModel @Inject constructor (
         }
     }
 
+    private fun myInt(s: String): Int {
+        return try {
+            s.toInt()
+        } catch (e: Exception) {
+            0
+        }
+    }
     // Run the iperf3 binary.
     // Must be a suspend function called from a coroutine.
     suspend fun runIperf3(): Int {
@@ -161,9 +188,11 @@ class Iperf3RunViewModel @Inject constructor (
         try {
             _uiStateFlow.value.iperf3Parameters.isReverse = _uiStateFlow.value.isReverse
             _uiStateFlow.value.iperf3Parameters.forceFlush = _uiStateFlow.value.forceFlush
-            _uiStateFlow.value.iperf3Parameters.parallelStreams = _uiStateFlow.value.parallelStreams.toInt()
-            _uiStateFlow.value.iperf3Parameters.durationSecs = _uiStateFlow.value.durationSecs.toInt()
+            _uiStateFlow.value.iperf3Parameters.parallelStreams = myInt(_uiStateFlow.value.parallelStreams)
+            _uiStateFlow.value.iperf3Parameters.durationSecs = myInt(_uiStateFlow.value.durationSecs)
+            _uiStateFlow.value.iperf3Parameters.skip = myInt(_uiStateFlow.value.skip)
             _uiStateFlow.value.iperf3Parameters.timeout = _uiStateFlow.value.iperf3Parameters.timeout
+
             // Run the iperf3 binary with the provided parameters.
             MonitorIPerf3Output.resetGathered()
             MonitorIPerf3Output.setParallel(_uiStateFlow.value.iperf3Parameters.parallelStreams)
@@ -174,10 +203,20 @@ class Iperf3RunViewModel @Inject constructor (
                 stderr = ::saveErrorLine,
                 iperf3Parameters = uiStateFlow.value.iperf3Parameters
             )
+
         } catch (e: Exception) {
             Log.e(tag, "Failed to run iperf3: ${e.message}", e)
             saveErrorLine("Failed to run iperf3: ${e.message}")
             rc = -1
+        }
+
+
+        if (rc == 0) {
+            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Average: ${MonitorIPerf3Output.getAverageBitsBytesPerSec()}")})}
+            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Maximum: ${MonitorIPerf3Output.getMaximumBitsBytesPerSec()}")})}
+            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Minimum: ${MonitorIPerf3Output.getMinimumBitsBytesPerSec()}")})}
+        }else {
+            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Return Code: $rc") })}
         }
 
         // Update the UI state to show that the test is finished.
@@ -189,9 +228,6 @@ class Iperf3RunViewModel @Inject constructor (
                 isRunning = false,
                 isFinished = true,
                 hostName =  if (it.hostName != "jabramson.com") it.hostName else "",
-                maximumLine = MonitorIPerf3Output.getMaximumBitsBytesPerSec(),
-                minimumLine = MonitorIPerf3Output.getMinimumBitsBytesPerSec(),
-                averageLine = MonitorIPerf3Output.getAverageBitsBytesPerSec()
             )
         }
 
@@ -208,7 +244,8 @@ class Iperf3RunViewModel @Inject constructor (
                     durationSecs = ip.durationSecs,
                     isReverse = ip.isReverse,
                     forceFlush = ip.forceFlush,
-                    timeout = ip.timeout
+                    timeout = ip.timeout,
+                    skip = ip.skip
                 )
             )
         }
@@ -246,6 +283,21 @@ class Iperf3RunViewModel @Inject constructor (
         }
     }
 
+    fun setSkip(skip: String) {
+        var d = 0
+        if (!skip.isEmpty()) {
+            try {
+                d = skip.toInt()
+            } catch (e: Exception) {
+                return
+            }
+        }
+        _uiStateFlow.update {
+            it.copy(skip = skip,
+                iperf3Parameters = it.iperf3Parameters.copy(skip = d))
+        }
+    }
+
     fun setParallelStreams(str: String) {
         var d = 0
         if (!str.isEmpty()) {
@@ -267,6 +319,17 @@ class Iperf3RunViewModel @Inject constructor (
         }
     }
 
+    fun setUploadDownload(str: String) {
+        _uiStateFlow.update {
+            it.copy(isReverse = str.lowercase(getDefault()) == "download")
+        }
+    }
+
+    fun getUploadDownload(): String {
+        return if (_uiStateFlow.value.isReverse) "Download" else "Upload"
+    }
+
+
     fun toggleForceFlush() {
         _uiStateFlow.update {
             it.copy(forceFlush = !it.forceFlush)
@@ -282,6 +345,21 @@ class Iperf3RunViewModel @Inject constructor (
     fun setForceFlush(forceFlush: Boolean) {
         _uiStateFlow.update {
             it.copy(iperf3Parameters = it.iperf3Parameters.copy(forceFlush = forceFlush))
+        }
+    }
+
+    fun setVerbose(isVerbose: Boolean) {
+        _uiStateFlow.update {
+            it.copy(isVerbose = isVerbose)
+        }
+    }
+
+    fun setDebug(traceLevel: String) {
+        _uiStateFlow.update {
+            it.copy(
+                isDebugging = traceLevel.lowercase() == "trace",
+                isVerbose = traceLevel.lowercase() == "verbose"
+            )
         }
     }
 

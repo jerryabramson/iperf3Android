@@ -3,12 +3,9 @@ package edu.bu.cs683_jabramson_project.iperf3_network_tester.runner
 import android.util.Log
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
 import kotlinx.coroutines.Dispatchers
-
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.time.delay
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
-import java.io.File
 import java.io.InputStream
 import java.io.InputStreamReader
 
@@ -30,11 +27,12 @@ suspend fun iperf3Runner(
     val command = iperf3Parameters.iperf3Binary.absolutePath
     var flush  = ""
     var reverse = ""
-    var parallelStreams = iperf3Parameters.parallelStreams
+    val parallelStreams = iperf3Parameters.parallelStreams
     if (iperf3Parameters.forceFlush) flush = "--forceflush"
     if (iperf3Parameters.isReverse) reverse = "-R"
     var localTimeout = 3000L
     if (iperf3Parameters.timeout != 0L) localTimeout = iperf3Parameters.timeout
+
     val processBuilder = ProcessBuilder(
         command,
         "-c", iperf3Parameters.serverHost,
@@ -43,8 +41,8 @@ suspend fun iperf3Runner(
         "-P", parallelStreams.toString(),
         "--connect-timeout",
         localTimeout.toString(),
-        "-t", iperf3Parameters.durationSecs.toString()
-    )
+        "-t", iperf3Parameters.durationSecs.toString(),
+        "-O", iperf3Parameters.skip.toString())
         .redirectOutput(ProcessBuilder.Redirect.PIPE)
         .redirectError(ProcessBuilder.Redirect.PIPE)
     Log.d("Iperf3Runner", "processBuilder: ${processBuilder.command()}")
