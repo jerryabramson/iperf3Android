@@ -1,7 +1,9 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel
 
 
+import android.R.attr.duration
 import android.util.Log
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -33,11 +35,15 @@ data class UiData(
     val maximumLine: String = "",
     val averageLine: String = "",
     val progress: Float = 0f,
+    var durationSecs: String = "",
+    var parallelStreams: String = "",
     val isRunning: Boolean = false,
     val isDebugging: Boolean = false,
     val isFinished: Boolean = false,
+    val forceFlush: Boolean = iperf3Parameters.forceFlush,
     val returnCode: Int = 0,
-    val lastLine: String = ""
+    val lastLine: String = "",
+    val isReverse: Boolean = iperf3Parameters.isReverse,
 )
 
 /**
@@ -80,8 +86,10 @@ class Iperf3RunViewModel @Inject constructor (
                 isRunning = false,
                 isFinished = false,
                 isDebugging = false,
+                forceFlush = true,
                 returnCode = 0,
-                lastLine = ""
+                lastLine = "",
+                durationSecs = ""
             )
         }
     }
@@ -90,14 +98,16 @@ class Iperf3RunViewModel @Inject constructor (
 
     fun saveOutputLine(aLine: String) {
         val formattedResult: String = MonitorIPerf3Output.processLine(aLine)
-        if (!formattedResult.isEmpty()) {
+        if (formattedResult.isNotEmpty() || MonitorIPerf3Output.getIperf3Messages().isNotEmpty()) {
             Log.d(tag, "stdout: $formattedResult")
+            val lastMessages = MonitorIPerf3Output.getLastIperf3Messages().toMutableList()
+            if (lastMessages.isNotEmpty()) Log.d(tag, "lastMessages: $lastMessages")
             _uiStateFlow.update {
                 it.copy(
                     lastLine = it.latestLine,
                     latestLine = formattedResult,
                     outputLines = it.outputLines.also { it.add(formattedResult) },
-                    iperf3Messages = MonitorIPerf3Output.getIperf3Messages().toMutableList()
+                    iperf3Messages = it.iperf3Messages.also { it.addAll(lastMessages) }
                 )
             }
         }
@@ -115,6 +125,8 @@ class Iperf3RunViewModel @Inject constructor (
         // Prepare the iperf3 parameters. The default hostname is 'jabramson.com'
         // 72.65.115.120
         if (_uiStateFlow.value.hostName.isEmpty()) _uiStateFlow.value.hostName = "jabramson.com"
+        if (_uiStateFlow.value.parallelStreams.isEmpty()) _uiStateFlow.value.parallelStreams = "8"
+        if (_uiStateFlow.value.durationSecs.isEmpty()) _uiStateFlow.value.durationSecs = "10"
         _uiStateFlow.value.iperf3Parameters.serverHost = _uiStateFlow.value.hostName
 
         // Update the UI state to show that the test is about to run
@@ -136,18 +148,31 @@ class Iperf3RunViewModel @Inject constructor (
 
     }
 
+    fun saveIperf3Message(aMessage: String) {
+        _uiStateFlow.update {
+            it.copy(iperf3Messages = it.iperf3Messages.also { it.add(aMessage) })
+        }
+    }
+
     // Run the iperf3 binary.
     // Must be a suspend function called from a coroutine.
     suspend fun runIperf3(): Int {
         var rc: Int
         try {
+            _uiStateFlow.value.iperf3Parameters.isReverse = _uiStateFlow.value.isReverse
+            _uiStateFlow.value.iperf3Parameters.forceFlush = _uiStateFlow.value.forceFlush
+            _uiStateFlow.value.iperf3Parameters.parallelStreams = _uiStateFlow.value.parallelStreams.toInt()
+            _uiStateFlow.value.iperf3Parameters.durationSecs = _uiStateFlow.value.durationSecs.toInt()
+            _uiStateFlow.value.iperf3Parameters.timeout = _uiStateFlow.value.iperf3Parameters.timeout
             // Run the iperf3 binary with the provided parameters.
             MonitorIPerf3Output.resetGathered()
+            MonitorIPerf3Output.setParallel(_uiStateFlow.value.iperf3Parameters.parallelStreams)
+            MonitorIPerf3Output.setSingleThread(_uiStateFlow.value.iperf3Parameters.parallelStreams == 1)
             rc = iperf3Runner(
                 updateProgress = ::updateProgress,
                 stdout = ::saveOutputLine,
                 stderr = ::saveErrorLine,
-                iperf3Parameters = _uiStateFlow.value.iperf3Parameters
+                iperf3Parameters = uiStateFlow.value.iperf3Parameters
             )
         } catch (e: Exception) {
             Log.e(tag, "Failed to run iperf3: ${e.message}", e)
@@ -163,11 +188,10 @@ class Iperf3RunViewModel @Inject constructor (
                 returnCode = rc,
                 isRunning = false,
                 isFinished = true,
-                hostName = "",
+                hostName =  if (it.hostName != "jabramson.com") it.hostName else "",
                 maximumLine = MonitorIPerf3Output.getMaximumBitsBytesPerSec(),
                 minimumLine = MonitorIPerf3Output.getMinimumBitsBytesPerSec(),
-                averageLine = MonitorIPerf3Output.getAverageBitsBytesPerSec(),
-                iperf3Messages = MonitorIPerf3Output.getIperf3Messages().toMutableList()
+                averageLine = MonitorIPerf3Output.getAverageBitsBytesPerSec()
             )
         }
 
@@ -192,7 +216,7 @@ class Iperf3RunViewModel @Inject constructor (
 
     fun updateProgress(l: Float) {
         var p = l
-        if (_uiStateFlow.value.iperf3Parameters.isReverse) { p = 1.0f - l }
+        if (_uiStateFlow.value.isReverse) { p = 1.0f - l }
         _uiStateFlow.update {
             it.copy(progress = p)
         }
@@ -207,21 +231,51 @@ class Iperf3RunViewModel @Inject constructor (
         }
     }
 
-    fun setDuration(duration: Int) {
+    fun setDuration(duration: String) {
+        var d = 0
+        if (!duration.isEmpty()) {
+            try {
+                d = duration.toInt()
+            } catch (e: Exception) {
+                return
+            }
+        }
         _uiStateFlow.update {
-            it.copy(iperf3Parameters = it.iperf3Parameters.copy(durationSecs = duration))
+            it.copy(durationSecs = duration,
+                iperf3Parameters = it.iperf3Parameters.copy(durationSecs = d))
         }
     }
 
-    fun setReverse(reverse: Boolean) {
+    fun setParallelStreams(str: String) {
+        var d = 0
+        if (!str.isEmpty()) {
+            try {
+                d = str.toInt()
+            } catch (e: Exception) {
+                return
+            }
+        }
         _uiStateFlow.update {
-            it.copy(iperf3Parameters = it.iperf3Parameters.copy(isReverse = reverse))
+            it.copy(parallelStreams = str,
+                iperf3Parameters = it.iperf3Parameters.copy(parallelStreams = d))
         }
     }
 
-    fun setDebug(isDebugging: Boolean) {
+    fun toggleReverse() {
         _uiStateFlow.update {
-            it.copy(isDebugging = isDebugging)
+            it.copy(isReverse = !it.isReverse)
+        }
+    }
+
+    fun toggleForceFlush() {
+        _uiStateFlow.update {
+            it.copy(forceFlush = !it.forceFlush)
+        }
+    }
+
+    fun toggleDebug() {
+        _uiStateFlow.update {
+            it.copy(isDebugging = !it.isDebugging)
         }
     }
 

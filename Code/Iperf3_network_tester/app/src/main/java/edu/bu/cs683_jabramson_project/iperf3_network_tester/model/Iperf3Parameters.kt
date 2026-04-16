@@ -10,6 +10,7 @@ data class Iperf3Parameters(
     var isReverse: Boolean = false,
     var forceFlush: Boolean = true,
     var timeout: Long = 0,
+    var parallelStreams: Int = 1,
     var runner: suspend () -> Unit = { }
 )
 

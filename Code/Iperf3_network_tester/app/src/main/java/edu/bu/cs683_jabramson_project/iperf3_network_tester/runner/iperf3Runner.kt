@@ -30,6 +30,7 @@ suspend fun iperf3Runner(
     val command = iperf3Parameters.iperf3Binary.absolutePath
     var flush  = ""
     var reverse = ""
+    var parallelStreams = iperf3Parameters.parallelStreams
     if (iperf3Parameters.forceFlush) flush = "--forceflush"
     if (iperf3Parameters.isReverse) reverse = "-R"
     var localTimeout = 3000L
@@ -39,13 +40,14 @@ suspend fun iperf3Runner(
         "-c", iperf3Parameters.serverHost,
         reverse,
         flush,
+        "-P", parallelStreams.toString(),
         "--connect-timeout",
         localTimeout.toString(),
         "-t", iperf3Parameters.durationSecs.toString()
     )
         .redirectOutput(ProcessBuilder.Redirect.PIPE)
         .redirectError(ProcessBuilder.Redirect.PIPE)
-   // processBuilder.redirectErrorStream(true)   // merge stderr into stdout
+    Log.d("Iperf3Runner", "processBuilder: ${processBuilder.command()}")
 
     // -----------------------------------------------------------
     // 4️⃣ Launch, capture output, wait for termination
@@ -78,8 +80,16 @@ suspend fun iperf3Runner(
             if (line.contains("Interval") && !started) {
                 started = true
                 intervalCount = 0
-            } else if (line.contains("[") && line.contains("]")) {
-                if (started) intervalCount++
+            } else {
+                if (iperf3Parameters.parallelStreams == 1) {
+                    if (line.contains("[") && line.contains("]")) {
+                        if (started) intervalCount++
+                    }
+                } else {
+                    if (line.contains("[") && line.contains("]") && line.contains("SUM")) {
+                        if (started) intervalCount++
+                    }
+                }
             }
             stdout(line)
             updateProgress(intervalCount.toFloat() / 10)
@@ -135,9 +145,18 @@ suspend fun launchSimulation(
         if (line.contains("Interval") && !started) {
             started = true
             intervalCount = 0
-        } else if (line.contains("[") && line.contains("]")) {
-            Thread.sleep(1000)
-            if (started && intervalCount < 10) intervalCount++
+        } else {
+            if (iperf3Parameters.parallelStreams == 1) {
+                if (line.contains("[") && line.contains("]")) {
+                    Thread.sleep(1000)
+                    if (started && intervalCount < 10) intervalCount++
+                }
+            } else {
+                if (line.contains("[") && line.contains("]") && line.contains("SUM")) {
+                    Thread.sleep(1000)
+                    if (started && intervalCount < 10) intervalCount++
+                }
+            }
         }
         stdout(line)
         updateProgress(intervalCount.toFloat() / 10)

@@ -5,6 +5,7 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.utils;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -33,6 +34,7 @@ class ConnectDetails {
     boolean finished = false;
     boolean lastOmitted = false;
     boolean isSingleThread = true;
+    int parallel = 1;
 
     public void setMaxBitsBytesPerSec(double maxBitsBytesPerSec, String unit) {
         if (maxBitsBytesPerSec > this.maxBitsBytesPerSec) {
@@ -70,8 +72,23 @@ public class MonitorIPerf3Output {
         return conn.avgBitsBytesPerSec + " " + conn.avgBitsBytesPerSecUnit;
     }
 
+    public static void setSingleThread(boolean isSingleThread) { conn.isSingleThread = isSingleThread; }
+    public static void setParallel(int parallel) { conn.parallel = parallel; }
     public static List<String> getIperf3Messages() {
         return conn.iperf3Messages;
+    }
+
+    public static List<String> getLastIperf3Messages() {
+        List<String> messages = new ArrayList<>();
+        if (!getIperf3Messages().isEmpty()) {
+            Iterator<String> iterator = getIperf3Messages().iterator();
+            while (iterator.hasNext()) {
+                String line = iterator.next();
+                iterator.remove();
+                messages.add(line);
+            }
+        }
+        return messages;
     }
 
     public static void resetGathered() {
@@ -95,6 +112,7 @@ public class MonitorIPerf3Output {
         conn.finished = false;
         conn.lastOmitted = false;
         conn.isSingleThread = true;
+        conn.parallel = 1;
     }
 
     public static String processLine(String line) {
@@ -123,15 +141,16 @@ public class MonitorIPerf3Output {
                     conn.remotePort = Long.parseLong(restOfLine[9]);
                     conn.connectedString = restOfLine[5];
                     conn.timeout = restOfLine[6];
-                    output =   "    Local Host/IP: " + conn.localHost +
-                             "\n   Remote Host/IP: " + conn.remoteHost +
-                             "\n      Remote Port: " + conn.remotePort;
+                    String formattedConnectionDetails =
+                            "    Local Host/IP: " + conn.localHost +
+                                    "\n   Remote Host/IP: " + conn.remoteHost +
+                                    "\n      Remote Port: " + conn.remotePort;
+                    conn.iperf3Messages.add(formattedConnectionDetails);
                     conn.gathered = true;
-                    return output;
                 } else {
                     // Other iperf3 information
                     if (!line.trim().isEmpty()) {
-                        return line;
+                        conn.iperf3Messages.add(line);
                     }
                 }
             } else {
@@ -149,7 +168,8 @@ public class MonitorIPerf3Output {
                     if (!sendOrReceive.toLowerCase().contains("sender") && !sendOrReceive.toLowerCase().contains("receiv") && !sendOrReceive.toLowerCase().contains("omit")) {
                         sendOrReceive = "";
                     }
-                    String time = "Running";
+                    String time = " Running";
+                    if (!conn.isSingleThread) time = conn.parallel + " streams";
                     boolean done = false;
                     if (ID.contains("SUM") || conn.isSingleThread) {
                         double bitRateValue = -1;
@@ -188,9 +208,7 @@ public class MonitorIPerf3Output {
                 }
             }
         } else {
-            if (!line.startsWith("- -") &&
-                    !line.toLowerCase().contains("iperf done") &&
-                    !line.trim().isEmpty()) {
+            if (!line.startsWith("- -") && !line.trim().isEmpty()) {
                 conn.iperf3Messages.add(line);
             }
         }
