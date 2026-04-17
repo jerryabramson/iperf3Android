@@ -21,10 +21,11 @@ import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.Iperf3RunV
 
 @Composable
 fun UploadDownload(viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewModel>(),
+                   currentButton: Int,
                    style: TextStyle)
 {
     val radioOptions = listOf("Download", "Upload")
-    val (selectedOption, onOptionSelected) = remember { mutableStateOf(radioOptions[0]) }
+    val (selectedOption, onOptionSelected) = remember { mutableStateOf(radioOptions[currentButton]) }
 
     // Note that Modifier.selectableGroup() is essential to ensure correct accessibility behavior
     Row(Modifier.selectableGroup(), verticalAlignment = Alignment.CenterVertically) {

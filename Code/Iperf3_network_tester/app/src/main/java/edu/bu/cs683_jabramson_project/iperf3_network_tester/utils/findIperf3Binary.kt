@@ -15,7 +15,7 @@ import java.io.FileOutputStream
  * @param context Any Android Context (usually an Activity or Application)
  * @return File object pointing to the iperf3 binary, or null if not found
  */
-fun getIperf3Binary(context: Context): File? {
+fun findIperf3Binary(context: Context): File? {
     // Strategy 1: Check if /bin/iperf3 exists (pre-installed on some Android devices)
     val preInstalledBinary = File("/bin/iperf3")
     if (preInstalledBinary.exists() && preInstalledBinary.canExecute()) {

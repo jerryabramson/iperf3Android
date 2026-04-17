@@ -1,6 +1,7 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.view
 
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -24,11 +25,10 @@ fun DebugOnOffRadioButton(viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3Ru
                           style: TextStyle
 ) {
     val radioOptions = listOf("Off", "Verbose", "Trace")
-
     val (selectedOption, onOptionSelected) = remember { mutableStateOf(radioOptions[current]) }
-
     // Note that Modifier.selectableGroup() is essential to ensure correct accessibility behavior
-    Row(Modifier.selectableGroup(), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.selectableGroup().padding(end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Spacer(modifier = Modifier.weight(1f)) // Takes ALL available space
         Text(text =  "      Debug", style = style, fontSize = 12.sp)
         radioOptions.forEach { text ->
             Row(
@@ -38,7 +38,7 @@ fun DebugOnOffRadioButton(viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3Ru
                         onClick = { onOptionSelected(text) },
                         role = Role.RadioButton,
                     ),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
                     selected = (text == selectedOption),
@@ -47,8 +47,7 @@ fun DebugOnOffRadioButton(viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3Ru
                 Text(
                     text = text,
                     style = style,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(start = 6.dp),
+                    fontSize = 10.sp
                 )
             }
         }

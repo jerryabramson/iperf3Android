@@ -15,12 +15,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.Locale.getDefault
 import javax.inject.Inject
 
 
-// Data class to hold the UI state. Notice that
-// all variables unchangeable `val` that are also mutable.
+object DefaultUIValues {
+    const val HOST_NAME = "jabramson.com"
+    const val PARALLEL_STREAMS = "8"
+    const val DURATION = "10"
+    const val SKIP = "2"
+}
+
+/**
+ * Data class to hold the UI state.
+ * Notice that all variables are unchangeable `val` that are also mutable.
+ * I also decided to store all numeric values as strings to avoid NumberFormatException
+ * issues at odd times in the UI.
+ */
 data class UiData(
     val iperf3Parameters: Iperf3Parameters = Iperf3Parameters(),
     val iperf3ResultsData: Iperf3ResultsData = Iperf3ResultsData(),
@@ -28,16 +40,16 @@ data class UiData(
     val errorLines: MutableList<String> = emptyList<String>().toMutableList(),
     val iperf3Messages: MutableList<String> = emptyList<String>().toMutableList(),
     val results: MutableList<String> = emptyList<String>().toMutableList(),
-    var hostName: String = "",
+    val hostName: String = "",
     val latestLine: String = "",
     val bandWidth: String = "",
     val minimum: String = "",
     val maximum: String = "",
     val average: String = "",
     val progress: Float = 0f,
-    var durationSecs: String = "",
-    var parallelStreams: String = "",
-    var skip: String = "",
+    val durationSecs: String = "",
+    val parallelStreams: String = "",
+    val skip: String = "",
     val isRunning: Boolean = false,
     val isDebugging: Boolean = false,
     val isVerbose: Boolean = false,
@@ -47,7 +59,7 @@ data class UiData(
     val lastLine: String = "",
     val isReverse: Boolean = iperf3Parameters.isReverse,
 
-)
+    )
 
 /**
  * View model to Runs the native iperf3 binary extracted from
@@ -55,13 +67,17 @@ data class UiData(
  *
  * @param savedStateHandle The SavedStateHandle instance for this ViewModel.
  */
-
 @HiltViewModel
 class Iperf3RunViewModel @Inject constructor (
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    //private val projId: String? = savedStateHandle[Constants.PROJECT_STATE]
+    var iperf3Binary: File = File("")
+    /**
+     * If we decide to have additional screens, this would
+     * provide for the navigation capability.
+     * private val screenId: String? = savedStateHandle[Constants.SCREEN_STATE]
+     */
 
     val tag = "Iperf3RunViewModel"
     private val iperf3Parameters: Iperf3Parameters = Iperf3Parameters()
@@ -69,10 +85,24 @@ class Iperf3RunViewModel @Inject constructor (
     private val _uiStateFlow = MutableStateFlow(UiData(iperf3Parameters))
     val uiStateFlow: StateFlow<UiData> = _uiStateFlow.asStateFlow()
 
+    /**
+     * Set the iperf3 executable. Should be the first thing called
+     * by user interface
+     */
+    fun setupIperf3Executable(iperf3Binary: File?) {
+        if (iperf3Binary != null) {
+            this.iperf3Binary = iperf3Binary
+            uiStateFlow.value.iperf3Parameters.iperf3Binary = iperf3Binary
+        } else {
+            Log.e(tag, "iperf3Binary is null")
+        }
+    }
 
-    // initialization
+    /**
+     * Initialize the UI state.
+     */
     init {
-        Log.d(tag, "initialize")
+        Log.d(tag, "initialize UI state")
         _uiStateFlow.update {
             it.copy(
                 iperf3Parameters = iperf3Parameters,
@@ -96,13 +126,17 @@ class Iperf3RunViewModel @Inject constructor (
                 lastLine = "",
                 bandWidth = "",
                 durationSecs = "",
-                skip =  ""
+                skip =  "",
+                parallelStreams = ""
             )
         }
     }
 
 
-
+    /**
+     * Callback to save an output line from the iperf3 binary.
+     * @param aLine The output line from the process execution.
+     */
     fun saveOutputLine(aLine: String) {
         val formattedResult: String = MonitorIPerf3Output.processLine(aLine)
         if (formattedResult.isNotEmpty() || MonitorIPerf3Output.getIperf3Messages().isNotEmpty()) {
@@ -123,6 +157,11 @@ class Iperf3RunViewModel @Inject constructor (
             }
         }
     }
+
+    /**
+     * Callback to save an error line from the iperf3 binary.
+     * @param aLine The error line from the process execution.
+     */
     fun saveErrorLine(aLine: String) {
         Log.d(tag, "stderr: $aLine")
         _uiStateFlow.update {
@@ -132,16 +171,11 @@ class Iperf3RunViewModel @Inject constructor (
         }
     }
 
+    /**
+     * Launch the iperf3 binary (notice that this is an asynchronous operation).
+     */
     fun launch() {
-        // Prepare the iperf3 parameters. The default hostname is 'jabramson.com'
-        // 72.65.115.120
-        if (_uiStateFlow.value.hostName.isEmpty()) _uiStateFlow.value.hostName = "jabramson.com"
-        if (_uiStateFlow.value.parallelStreams.isEmpty()) _uiStateFlow.value.parallelStreams = "8"
-        if (_uiStateFlow.value.durationSecs.isEmpty()) _uiStateFlow.value.durationSecs = "10"
-        if (_uiStateFlow.value.skip.isEmpty()) _uiStateFlow.value.skip = "0"
-        _uiStateFlow.value.iperf3Parameters.serverHost = _uiStateFlow.value.hostName
-
-        // Update the UI state to show that the test is about to run
+        // Update the UI active running state with empty values for the start of the test.
         _uiStateFlow.update {
             it.copy(isRunning = true,
                 isFinished = false,
@@ -155,71 +189,99 @@ class Iperf3RunViewModel @Inject constructor (
                 maximum = "",
                 average = "",
                 progress = 0f,
-                lastLine = ""
+                lastLine = "",
+                // Ensure the user can see selections during the run
+                hostName =  it.hostName.ifEmpty() { DefaultUIValues.HOST_NAME },
+                skip =  it.skip.ifEmpty { DefaultUIValues.SKIP },
+                durationSecs = it.durationSecs.ifEmpty { DefaultUIValues.DURATION },
+                parallelStreams = it.parallelStreams.ifEmpty { DefaultUIValues.PARALLEL_STREAMS }
             )
         }
 
+        /*
+         * Launch the iperf3 binary asynchronously.
+         * I decided to wrap the async launch in a separate function
+         * to make the code more explicit.
+         */
         Log.d(tag, "Async Launch Started")
-        viewModelScope.launch {
-            // Run the iperf3 binary asynchronously.
-            runIperf3()
-        }
+        viewModelScope.launch {runIperf3() }
         Log.d(tag, "Async Launch Completed")
-
     }
 
-    fun saveIperf3Message(aMessage: String) {
-        _uiStateFlow.update {
-            it.copy(iperf3Messages = it.iperf3Messages.also { it.add(aMessage) })
-        }
-    }
 
-    private fun myInt(s: String): Int {
-        return try {
-            s.toInt()
-        } catch (e: Exception) {
-            0
-        }
-    }
-    // Run the iperf3 binary.
-    // Must be a suspend function called from a coroutine.
+    /**
+     * I had some issues with `NumberFormatException` at odd times during
+     * testing, so I wrapped this in a try/catch.
+     * @param s The string to convert to an integer.
+     * @return The integer value of the string, or 0 if invalid.
+     */
+    private fun myInt(s: String): Int = try { s.toInt() } catch (ex: Exception) { 0 }
+
+
+    /**
+     * Run the iperf3 binary.
+     * This must be a suspend function called from a coroutine.
+     * @return The return code from the iperf3 binary.
+     */
     suspend fun runIperf3(): Int {
         var rc: Int
         try {
+            // Prepare the UI state for the test.
+
+            // Make sure we always have this available!
+            _uiStateFlow.value.iperf3Parameters.iperf3Binary = this.iperf3Binary
+
+            // Refresh model state with provided UI choices - booleans
             _uiStateFlow.value.iperf3Parameters.isReverse = _uiStateFlow.value.isReverse
             _uiStateFlow.value.iperf3Parameters.forceFlush = _uiStateFlow.value.forceFlush
-            _uiStateFlow.value.iperf3Parameters.parallelStreams = myInt(_uiStateFlow.value.parallelStreams)
-            _uiStateFlow.value.iperf3Parameters.durationSecs = myInt(_uiStateFlow.value.durationSecs)
-            _uiStateFlow.value.iperf3Parameters.skip = myInt(_uiStateFlow.value.skip)
-            _uiStateFlow.value.iperf3Parameters.timeout = _uiStateFlow.value.iperf3Parameters.timeout
+            _uiStateFlow.value.iperf3Parameters.serverHost = _uiStateFlow.value.hostName.ifEmpty { DefaultUIValues.HOST_NAME }
 
-            // Run the iperf3 binary with the provided parameters.
+            // Numerics
+            _uiStateFlow.value.iperf3Parameters.parallelStreams = myInt(_uiStateFlow.value.parallelStreams.ifEmpty { DefaultUIValues.PARALLEL_STREAMS })
+            _uiStateFlow.value.iperf3Parameters.durationSecs = myInt(uiStateFlow.value.durationSecs.ifEmpty { DefaultUIValues.DURATION })
+            _uiStateFlow.value.iperf3Parameters.skip = myInt(_uiStateFlow.value.skip.ifEmpty { DefaultUIValues.SKIP })
+
+            // Temp: Setup output parsing (old Java code)
             MonitorIPerf3Output.resetGathered()
             MonitorIPerf3Output.setParallel(_uiStateFlow.value.iperf3Parameters.parallelStreams)
             MonitorIPerf3Output.setSingleThread(_uiStateFlow.value.iperf3Parameters.parallelStreams == 1)
-            rc = iperf3Runner(
-                updateProgress = ::updateProgress,
-                stdout = ::saveOutputLine,
-                stderr = ::saveErrorLine,
-                iperf3Parameters = uiStateFlow.value.iperf3Parameters
-            )
 
+
+            // Run the iperf3 binary with the provided parameters.
+            rc = iperf3Runner(
+                updateProgress = ::updateProgress,                     // floating point track of progress
+                stdout = ::saveOutputLine,                             // output from iperf3
+                stderr = ::saveErrorLine,                              // errors from iperf3
+                iperf3Parameters = _uiStateFlow.value.iperf3Parameters  // parameters for iperf3
+            )
         } catch (e: Exception) {
+            /* Shouldn't ever get here, since guards are already in place */
             Log.e(tag, "Failed to run iperf3: ${e.message}", e)
             saveErrorLine("Failed to run iperf3: ${e.message}")
             rc = -1
         }
 
+//        // Temporary hack until I understand the issue with numeric values being lost
+//        _uiStateFlow.update {
+//            it.copy(
+//                parallelStreams = it.iperf3Parameters.parallelStreams.toString(),
+//                durationSecs = it.iperf3Parameters.durationSecs.toString(),
+//                skip = it.iperf3Parameters.skip.toString()
+//            )
+//        }
 
+        // Update the UI state to show that the test is finished.
+        // Provide the return code to the UI.
         if (rc == 0) {
+            // only update statistics on a successful run
             _uiStateFlow.update {it.copy(results = it.results.also { it.add("Average: ${MonitorIPerf3Output.getAverageBitsBytesPerSec()}")})}
             _uiStateFlow.update {it.copy(results = it.results.also { it.add("Maximum: ${MonitorIPerf3Output.getMaximumBitsBytesPerSec()}")})}
             _uiStateFlow.update {it.copy(results = it.results.also { it.add("Minimum: ${MonitorIPerf3Output.getMinimumBitsBytesPerSec()}")})}
         }else {
+            // Only need this on failure conditions
             _uiStateFlow.update {it.copy(results = it.results.also { it.add("Return Code: $rc") })}
         }
 
-        // Update the UI state to show that the test is finished.
         // Provide the return code to the UI.
         // Clear the hostName field for the UI.
         _uiStateFlow.update {
@@ -227,7 +289,12 @@ class Iperf3RunViewModel @Inject constructor (
                 returnCode = rc,
                 isRunning = false,
                 isFinished = true,
-                hostName =  if (it.hostName != "jabramson.com") it.hostName else "",
+
+                // Only remember last choices for non-default user selections
+                hostName =  if (it.hostName != DefaultUIValues.HOST_NAME) it.hostName else "",
+                skip =  if (it.skip != DefaultUIValues.SKIP) it.skip else "",
+                durationSecs = if (it.durationSecs != DefaultUIValues.DURATION) it.durationSecs else "",
+                parallelStreams = if (it.parallelStreams != DefaultUIValues.PARALLEL_STREAMS) it.parallelStreams else ""
             )
         }
 
@@ -235,22 +302,10 @@ class Iperf3RunViewModel @Inject constructor (
         return rc
     }
 
-    fun setupIperf3Parameters(ip: Iperf3Parameters) {
-        _uiStateFlow.update {
-            it.copy(
-                iperf3Parameters = it.iperf3Parameters.copy(
-                    iperf3Binary = ip.iperf3Binary,
-                    serverHost = ip.serverHost,
-                    durationSecs = ip.durationSecs,
-                    isReverse = ip.isReverse,
-                    forceFlush = ip.forceFlush,
-                    timeout = ip.timeout,
-                    skip = ip.skip
-                )
-            )
-        }
-    }
-
+    /**
+     * Callback to update the progress bar.
+     * @param l The new progress value.
+     */
     fun updateProgress(l: Float) {
         var p = l
         if (_uiStateFlow.value.isReverse) { p = 1.0f - l }
@@ -259,6 +314,10 @@ class Iperf3RunViewModel @Inject constructor (
         }
     }
 
+    /**
+     * User entered a new host name.
+     * @param host The new host name.
+     */
     fun updateHostName(host: String) {
         _uiStateFlow.update {
             it.copy(
@@ -268,92 +327,102 @@ class Iperf3RunViewModel @Inject constructor (
         }
     }
 
+    /**
+     * User entered a new duration.
+     * Notice that we do not allow changes to the user interface
+     * if the resulting number is invalid.
+     * @param duration The new value for duration.
+     */
     fun setDuration(duration: String) {
         var d = 0
+        var newDuration = _uiStateFlow.value.durationSecs // default to existing value
         if (!duration.isEmpty()) {
             try {
                 d = duration.toInt()
-            } catch (e: Exception) {
-                return
-            }
+                newDuration = "$d" // valid change
+            } catch (e: Exception) { /**/ }
+        } else {
+            newDuration = ""
         }
         _uiStateFlow.update {
-            it.copy(durationSecs = duration,
+            it.copy(durationSecs = newDuration,
                 iperf3Parameters = it.iperf3Parameters.copy(durationSecs = d))
         }
     }
 
+    /**
+     * User entered a new omitted.
+     * Notice that we do not allow changes to the user interface
+     * if the resulting number is invalid.
+     * @param skip The new value for omitted.
+     */
     fun setSkip(skip: String) {
         var d = 0
+        var newSkip = _uiStateFlow.value.skip // default to existing value
         if (!skip.isEmpty()) {
             try {
                 d = skip.toInt()
-            } catch (e: Exception) {
-                return
-            }
+                newSkip = "$d"
+            } catch (e: Exception) { /**/ }
+        } else {
+            newSkip = ""
         }
         _uiStateFlow.update {
-            it.copy(skip = skip,
+            it.copy(skip = newSkip,
                 iperf3Parameters = it.iperf3Parameters.copy(skip = d))
         }
     }
 
+    /**
+     * User entered a new value for parallel streams.
+     * Notice that we do not allow changes to the user interface
+     * if the resulting number is invalid.
+     * @param str The new value for parallel streams.
+     */
     fun setParallelStreams(str: String) {
         var d = 0
+        // default to existing value
+        var newStreams = _uiStateFlow.value.parallelStreams
         if (!str.isEmpty()) {
             try {
                 d = str.toInt()
-            } catch (e: Exception) {
-                return
-            }
+                newStreams = "$d" // valid change
+            } catch (e: Exception) { /**/    }
+        } else {
+            newStreams = ""
         }
         _uiStateFlow.update {
-            it.copy(parallelStreams = str,
+            it.copy(parallelStreams = newStreams,
                 iperf3Parameters = it.iperf3Parameters.copy(parallelStreams = d))
         }
     }
 
-    fun toggleReverse() {
-        _uiStateFlow.update {
-            it.copy(isReverse = !it.isReverse)
-        }
-    }
-
+    /**
+     * User entered a new upload/download.
+     * @param str The new value for upload/download.
+     */
     fun setUploadDownload(str: String) {
         _uiStateFlow.update {
             it.copy(isReverse = str.lowercase(getDefault()) == "download")
         }
     }
 
-    fun getUploadDownload(): String {
-        return if (_uiStateFlow.value.isReverse) "Download" else "Upload"
-    }
 
-
-    fun toggleForceFlush() {
-        _uiStateFlow.update {
-            it.copy(forceFlush = !it.forceFlush)
-        }
-    }
-
-    fun toggleDebug() {
-        _uiStateFlow.update {
-            it.copy(isDebugging = !it.isDebugging)
-        }
-    }
-
+    /**
+     * User entered a new force flush.
+     * @param forceFlush The new value for forceflush.
+     */
     fun setForceFlush(forceFlush: Boolean) {
         _uiStateFlow.update {
             it.copy(iperf3Parameters = it.iperf3Parameters.copy(forceFlush = forceFlush))
         }
     }
 
-    fun setVerbose(isVerbose: Boolean) {
-        _uiStateFlow.update {
-            it.copy(isVerbose = isVerbose)
-        }
-    }
 
+    /**
+     * User entered a new trace level.
+     * @param traceLevel The new value for trace level.
+     */
     fun setDebug(traceLevel: String) {
         _uiStateFlow.update {
             it.copy(
@@ -363,11 +432,7 @@ class Iperf3RunViewModel @Inject constructor (
         }
     }
 
-    fun setTimeout(to: Long) {
-        _uiStateFlow.update {
-            it.copy(iperf3Parameters = it.iperf3Parameters.copy(timeout = to))
-        }
-    }
+
 }
 
 

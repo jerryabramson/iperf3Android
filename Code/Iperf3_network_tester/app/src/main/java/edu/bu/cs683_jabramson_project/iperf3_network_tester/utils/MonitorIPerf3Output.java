@@ -138,9 +138,6 @@ public class MonitorIPerf3Output {
             String[] restOfLine = line.substring(firstRightBracket + 1).split(WORD_DELIMITER_RE);
             if (ID.contains("ID")) {
                 if (!conn.gathered) {
-                    output =  "    Local Host/IP: " + conn.localHost +
-                            "\n   Remote Host/IP: " + conn.remoteHost +
-                            "\n      Remote Port: " + conn.remotePort;
                     conn.gathered = true;
                     conn.resultEntry = 0;
                     return output;
@@ -154,11 +151,9 @@ public class MonitorIPerf3Output {
                     conn.remotePort = Long.parseLong(restOfLine[9]);
                     conn.connectedString = restOfLine[5];
                     conn.timeout = restOfLine[6];
-                    String formattedConnectionDetails =
-                            "    Local Host/IP: " + conn.localHost +
-                                    "\n   Remote Host/IP: " + conn.remoteHost +
-                                    "\n      Remote Port: " + conn.remotePort;
-                    conn.iperf3Messages.add(formattedConnectionDetails);
+                    conn.iperf3Messages.add("    Local Host/IP: " + conn.localHost);
+                    conn.iperf3Messages.add("   Remote Host/IP: " + conn.remoteHost);
+                    conn.iperf3Messages.add("      Remote Port: " + conn.remotePort);
                     conn.gathered = true;
                 } else {
                     // Other iperf3 information

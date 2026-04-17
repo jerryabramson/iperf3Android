@@ -41,10 +41,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme.Iperf3NetworkTesterTheme
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme.mesloFontFamily
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.DefaultUIValues
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.Iperf3RunViewModel
+import java.io.File
 
 
 @Composable
@@ -55,12 +56,12 @@ fun MyScreen() {
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
+fun RunIperf3Screen(iperf3Binary: File?,
                     viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewModel>())
 {
     Iperf3NetworkTesterTheme(content = {
         val uiState by viewModel.uiStateFlow.collectAsState()
-        viewModel.setupIperf3Parameters(iperf3Parameters)
+        viewModel.setupIperf3Executable(iperf3Binary)
 
         val mesloMonoStyle = TextStyle(
             fontFamily = mesloFontFamily(),
@@ -99,13 +100,14 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                 TopAppBar(title = { Text("iperf3 Performance Tester") })
             },
             bottomBar = {
+                Text("CS683-MobileDevelopment Project Jerold Abramson", fontSize =  10.sp)
                 Text(
-                    "Executable:  ${uiState.iperf3Parameters.iperf3Binary}",
+                    "${uiState.iperf3Parameters.iperf3Binary}",
                     style = mesloMonoStyle,
                     color = MaterialTheme.colorScheme.error,
-                    fontSize = 12.sp,
+                    fontSize = 6.sp,
                     modifier = Modifier
-                        .padding(16.dp)
+                        .padding(start = 16.dp)
                         .fillMaxWidth()
                 )
             }
@@ -117,7 +119,6 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                     .fillMaxSize()
             ) {
 
-                val prompt = "Host Name or IP Address"
                 Row(
                     verticalAlignment = Alignment.Top,
                     modifier = Modifier
@@ -128,10 +129,10 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                         value = uiState.hostName,
                         onValueChange = viewModel::updateHostName,
                         enabled = !uiState.isRunning,
-                        placeholder = { Text("jabramson.com") },
+                        placeholder = { Text(DefaultUIValues.HOST_NAME) },
                         modifier = Modifier
-                            .padding(end = 6.dp),
-                        label = { Text(prompt) },
+                            .padding(end = 30.dp),
+                        label = { Text("Host Name or IP Address") },
                         colors = baseTextFieldColors,
                         singleLine = true,
                         keyboardActions = KeyboardActions(onDone = {
@@ -140,12 +141,13 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                     )
 
 
+                    Spacer(modifier = Modifier.weight(1f))
                     // -------------------------------------------------------------
                     // Button to start the test
                     // -------------------------------------------------------------
                     Button(
-                        modifier = Modifier.padding(end = 4.dp),
-                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.padding(end = 10.dp),
+                        shape = MaterialTheme.shapes.large,
                         onClick = {
                             viewModel.launch()
                         }, enabled = !uiState.isRunning
@@ -159,51 +161,31 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                 Row(modifier = Modifier.fillMaxWidth()) {
                     TextField(
                         value = uiState.durationSecs,
-                        onValueChange = { viewModel.setDuration(it) },
+                        onValueChange = viewModel::setDuration,
                         enabled = !uiState.isRunning,
-                        placeholder = {
-                            Text(
-                                "10",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Normal
-                            )
-                        },
+                        placeholder = { Text("10") },
                         modifier = Modifier
                             .width(150.dp)
                             .padding(start = 10.dp),
-                        label = {
-                            Text(
-                                "Duration"
-                            )
-                        },
+                        label = { Text("Duration") },
                         colors = baseTextFieldColors,
                         singleLine = true
                     )
                     TextField(
                         value = uiState.parallelStreams,
-                        onValueChange = { viewModel.setParallelStreams(it) },
+                        onValueChange = viewModel::setParallelStreams,
                         enabled = !uiState.isRunning,
-                        placeholder = {
-                            Text(
-                                "8",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Normal
-                            )
-                        },
+                        placeholder = { Text("8") },
                         modifier = Modifier
-                            .width(190.dp)
-                            .padding(start = 10.dp),
-                        label = {
-                            Text(
-                                "Parallel Streams",
-                            )
-                        },
+                            .width(160.dp)
+                            .padding(start = 4.dp),
+                        label = {Text("Streams") },
                         colors = baseTextFieldColors,
                         singleLine = true
                     )
                     TextField(
                         value = uiState.skip,
-                        onValueChange = { viewModel.setSkip(it) },
+                        onValueChange = viewModel::setSkip,
                         enabled = !uiState.isRunning,
                         placeholder = {
                             Text(
@@ -214,7 +196,7 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                         },
                         modifier = Modifier
                             .width(150.dp)
-                            .padding(start = 10.dp),
+                            .padding(start = 4.dp, end =  10.dp),
                         label = {
                             Text(
                                 "Omit"
@@ -227,22 +209,24 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                 }
 
 
-                Column(modifier = Modifier.padding(start = 10.dp)) {
+                Column(modifier = Modifier.padding(start = 10.dp, end =  10.dp)) {
                     if (!uiState.isRunning) {
-                        UploadDownload(viewModel = viewModel, mesloMonoStyle)
+                        var currentUploadButton = 0
+                        if (uiState.isReverse) currentUploadButton = 0
+                        else currentUploadButton = 1
+                        UploadDownload(viewModel = viewModel, currentUploadButton, mesloMonoStyle)
                         HorizontalDivider(
                             modifier = Modifier.fillMaxWidth(),
                             thickness = 1.dp,
                             color = MaterialTheme.colorScheme.tertiary
                         )
-                        ForceFlushRadioButton(viewModel = viewModel, mesloMonoStyle)
                     }
                     var currentDebugButton = 0
                     if (uiState.isDebugging) currentDebugButton = 2
                     else if (uiState.isVerbose) currentDebugButton = 1
                     DebugOnOffRadioButton(viewModel = viewModel, currentDebugButton, mesloMonoStyle)                }
 
-                if (!uiState.isRunning && uiState.isFinished && uiState.errorLines.isEmpty()) {
+                if (!uiState.isRunning && uiState.isFinished) {
                     Spacer(modifier = Modifier.height(4.dp))
                     var color = MaterialTheme.colorScheme.primary
                     if (uiState.returnCode != 0) color = MaterialTheme.colorScheme.onError
@@ -269,17 +253,12 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
 
                 if (uiState.isRunning) {
                     Column(
-                        Modifier.fillMaxWidth().padding(start = 10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        Modifier.fillMaxWidth().padding(start = 10.dp)
                     ) {
                         if (uiState.latestLine.isEmpty()) {
                             Text(
-                                "Launching iperf3 ${if (uiState.isReverse) "Downloading" else "Uploading"} for ${uiState.durationSecs} seconds\nRemote host is ${uiState.hostName}\n${uiState.parallelStreams} Parallel streams",
-                                modifier = Modifier
-                                    .padding(2.dp)
-                                    .fillMaxWidth(),
-                                textAlign = TextAlign.Left,
-                                style = MaterialTheme.typography.titleMedium,
+                                "Launching iperf3 ...",
+                                style = MaterialTheme.typography.titleSmall,
                             )
                         }
                         val primaryColor =
@@ -288,12 +267,11 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                             if (!uiState.isReverse) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
 
                         if (uiState.bandWidth.isNotEmpty()) {
-                            numSeconds = uiState.progress * 10
-                            var num = numSeconds
-                            if (uiState.isReverse) num =
-                                uiState.durationSecs.toFloat() - numSeconds
+                            var num = uiState.progress
+                            if (uiState.isReverse) num = 1 - num
+                            val percentComplete = (num * 100).toInt()
                             Text(
-                                "${num.toInt()} seconds elapsed",
+                                "${percentComplete}% complete",
                                 modifier = Modifier.fillMaxWidth(),
                                 textAlign = TextAlign.Center,
                                 fontSize = 18.sp
@@ -337,11 +315,29 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
 
 
                 if (uiState.errorLines.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(24.dp))
                     HorizontalDivider(
                         modifier = Modifier.fillMaxWidth(),
                         thickness = 4.dp,
                         color = MaterialTheme.colorScheme.error
                     )
+                    // Show the accumulated lines in a lazy list
+                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                        items(uiState.errorLines.size) { index ->
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = uiState.errorLines.get(index),
+                                    color = MaterialTheme.colorScheme.error,
+                                    textAlign = TextAlign.Left,
+                                    style = mesloMonoStyle,
+                                    fontSize = 10.sp,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
                 if (((uiState.isVerbose || uiState.isDebugging)  && (uiState.isRunning || uiState.isFinished) && uiState.iperf3Messages.isNotEmpty())) {
                     Spacer(modifier = Modifier.height(1.dp))
@@ -358,7 +354,7 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                                     text = uiState.iperf3Messages[index],
                                     textAlign = TextAlign.Left,
                                     style = mesloMonoStyle,
-                                    fontSize = 13.sp,
+                                    fontSize = 10.sp,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                 )
@@ -389,26 +385,6 @@ fun RunIperf3Screen(iperf3Parameters: Iperf3Parameters,
                             }
                         }
                     }
-                }
-
-
-                if (uiState.errorLines.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    // Show the accumulated lines in a lazy list
-                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                        items(uiState.errorLines.size) { index ->
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = uiState.errorLines.get(index),
-                                    color = MaterialTheme.colorScheme.error,
-                                    textAlign = TextAlign.Left,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                )
-                            }
-                        }
-                    }
-
                 }
             }
         }
