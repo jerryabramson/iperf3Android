@@ -73,13 +73,8 @@ class Iperf3RunViewModel @Inject constructor (
 ) : ViewModel() {
 
     var iperf3Binary: File = File("")
-    /**
-     * If we decide to have additional screens, this would
-     * provide for the navigation capability.
-     * private val screenId: String? = savedStateHandle[Constants.SCREEN_STATE]
-     */
-
     val tag = "Iperf3RunViewModel"
+
     private val iperf3Parameters: Iperf3Parameters = Iperf3Parameters()
     private val iperf3ResultsData: Iperf3ResultsData = Iperf3ResultsData()
     private val _uiStateFlow = MutableStateFlow(UiData(iperf3Parameters))
