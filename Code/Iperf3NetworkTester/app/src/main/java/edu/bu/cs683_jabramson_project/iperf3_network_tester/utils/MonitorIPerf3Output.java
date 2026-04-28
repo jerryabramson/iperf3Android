@@ -131,6 +131,7 @@ public class MonitorIPerf3Output {
     public static String processLine(String line) {
         String output = "";
         String ID;
+        line = line.replaceAll("\\n", "");
         int firstLeftBracket = line.indexOf("[");
         int firstRightBracket = line.indexOf("]");
         if (firstLeftBracket >= 0 && firstRightBracket > firstLeftBracket) {
