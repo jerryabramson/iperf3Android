@@ -1,77 +1,61 @@
-# AGENTS.md - Essential Guidelines for Iperf3 Network Tester Repository
+# AGENTS.md - Iperf3 Network Tester
 
-## Repository Structure
-- `Code/Iperf3_network_tester/` - Main Android project (source, assets, tests)
-- `Doc/` - Course documentation
-- `Assets/` - Pre-compiled iperf3 binaries and helper scripts (push/pull)
-- `README.md` - General project overview
-- `CLAUDE.md` - Detailed architecture, usage, and known issues
+## Project Overview
+- Android Jetpack Compose app, Kotlin + Java, AGP 9.1.1, Kotlin 2.3.20
+- Hilt DI via KSP (not KAPT), Room declared but not yet integrated
+- Package: `edu.bu.cs683_jabramson_project.iperf3_network_tester`
+- Project root: `Code/Iperf3NetworkTester/` (camelCase, no underscore)
 
-## Working with the Android Project
-The Android project is located in the `Code/Iperf3_network_tester` directory.
-All development commands must be run from this directory:
+## Dual iperf3 Execution -- JNI is Active
+
+iperf3 runs via **JNI**, not subprocess. CMake compiles iperf3 3.19 source into `libcellularlib.so`:
+- CMake config: `app/src/main/cpp/CMakeLists.txt`
+- JNI bridge: `runner/IperfJNIRunner.kt` loads `System.loadLibrary("cellularlab")`
+- Test orchestration: `runner/IperfTestManage.kt` calls `IperfRunner.runIperfLive()`
+- Output parsing: `utils/MonitorIPerf3Output.java` (Java, not Kotlin)
+
+The older subprocess-based `runner/iperf3Runner.kt` is present but not called by the active code path.
+
+### Binary Assets Still Present
+- `src/main/assets/iperf3_binaries/<abi>/iperf3` -- pre-compiled binaries (4 ABIs)
+- `aaptOptions.noCompress += "iperf3"` in `app/build.gradle.kts`
+- `findIperf3Binary()` in `utils/findIperf3Binary.kt` still extracts to `cacheDir` but is only used to populate `iperf3Binary` path in UI state (not for execution)
+- **Bug**: `findIperf3Binary.kt:20` checks `/bin/iperfff3` (three f's -- typo)
+
+## Build & Commands
+
+All commands from `Code/Iperf3NetworkTester/`:
+
 ```bash
-cd Code/Iperf3_network_tester
+./gradlew :app:assembleDebug      # Build debug APK
+./gradlew :app:assembleRelease    # Build release APK
+./gradlew :app:testDebugUnitTest  # Unit tests (stub only)
+./gradlew :app:connectedAndroidTest  # Instrumented tests (needs device/emulator)
 ```
 
-### Critical Non-Obvious Configurations
-#### Native Binary Handling (Most Important)
-Due to Android 10+ SELinux restrictions, executing binaries from app data is blocked:
-- Binaries stored in `src/main/assets/iperf3_binaries/<abi>/iperf3`
-- **Must** have `aaptOptions.noCompress += "iperf3"` in `app/build.gradle.kts`
-- Runtime extraction: `getIperf3Binary()` tries:
-  1. `/bin/iperf3` (pre-installed on some devices/emulators)
-  2. Extract from assets to `context.cacheDir/<abi>/iperf3` (chmod +x)
-- Returns null if unavailable (shows stubbed UI)
-- SELinux note: Extraction to cache dir may still be blocked on non-rooted devices; proper solution requires NDK compilation
+### Pre-deploy SELinux Workaround
+`assembleDebug` depends on `deployPrepScript`, which runs `app/scripts/pre-deploy.sh`. This script disables SELinux enforcement (`setenforce 0`) on the connected device/emulator via adb. It runs automatically before every debug build.
 
-#### Build-Specific Quirks
-- `abiFilters`: Only armeabi-v7a, arm64-v8a, x86, x86_64 (in build.gradle.kts)
-- `packaging.jniLibs.pickFirsts`: Prevents libc++_shared.so duplicates
-- Resolution strategy: Forces `org.jetbrains:annotations:23.0.0`, excludes IntelliJ annotations
-- Hilt configured with KSP plugin (`ksp(libs.hilt.compiler)` in build.gradle.kts)
-- Uses Gradle Version Catalogs (`gradle/libs.versions.toml` for dependency versions)
+There is **no** `startEmulator` Gradle task. Start emulator manually via Android Studio or `avdmanager`.
 
-### Essential Commands
-#### Build
-- `./gradlew :app:assembleDebug` - Build debug APK (fastest)
-- `./gradlew :app:assembleRelease` - Build release APK
-- `./gradlew :app:dependencies` - Show dependency tree
+## Build Quirks
+- `abiFilters`: armeabi-v7a, arm64-v8a, x86, x86_64
+- `packaging.jniLibs.pickFirsts`: Prevents `libc++_shared.so` duplicates across ABIs
+- Resolution strategy: Forces `org.jetbrains:annotations:23.0.0`, excludes `com.intellij:annotations`
+- Duplicate Room dependency declarations in `app/build.gradle.kts` (harmless but messy)
+- `local.properties` with `sdk.dir` is required for pre-deploy script
 
-#### Testing
-- `./gradlew :app:testDebugUnitTest` - All unit tests
-- `./gradlew :app:connectedAndroidTest` - Instrumented tests (needs device/emulator)
-- **Single unit test**: `./gradlew :app:testDebugUnitTest --tests "edu.bu.cs683_jabramson_project.iperf3_network_tester.ExampleUnitTest.addition_isCorrect"`
-- **Single instrumented test**: `./gradlew :app:connectedAndroidTest --tests "edu.bu.cs683_jabramson_project.iperf3_network_tester.ExampleInstrumentedTest"`
+## Architecture
+- **Single activity**: `MainActivity` (Hilt `@AndroidEntryPoint`) always renders `RunIperf3Screen`
+- **ViewModel**: `Iperf3RunViewModel` (`@HiltViewModel`) with `MutableStateFlow<UiData>`
+- **UI**: `view/Iperf3View.kt` contains `RunIperf3Screen`; supporting composables in `view/`
+- **Theme**: `ui/theme/` with custom MesloLGS NF monospace font
 
-#### Verification Order
-When making changes: `lint -> test` (or specific variant tests)
+## Testing
+- Only template stubs exist (`ExampleUnitTest`, `ExampleInstrumentedTest`)
+- No lint configuration -- skip lint step
 
-### Emulator Task
-- `./gradlew startEmulator` - Starts the Pixel 6 API 36.0 emulator in the background and prints its PID.
-  The emulator can be used for running tests or manual testing.
-  Note: The emulator may take a minute to boot fully. The `connectedAndroidTest` task will wait for a device to be online.
-
-### Device Setup & Binary Deployment
-1. Ensure device has USB debugging enabled and is visible via `adb devices`
-2. For app to find iperf3 binary:
-   - Option A (Rooted): Binary must exist at `/bin/iperf3` and be executable
-   - Option B (Non-rooted): Asset extraction may work on older devices; SELinux blocks on Android 10+
-   - Helper script: `Assets/pushIperf3.sh` pushes binary to `/data/local/tmp/iperf3` (for manual testing via adb shell)
-3. Install APK:
-   ```bash
-   adb install -r app/build/outputs/apk/debug/app-debug.apk
-   ```
-
-### Code Style Notes
-- Follows standard Kotlin/Android conventions
-- Composables: side-effect free, immutable params, `remember` for state
-- Tests: JUnit 5 for unit, AndroidJUnit4/Espresso for instrumented
-- Hilt ViewModels: `@HiltViewModel` with ` SavedStateHandle` injection
-- Native binary paths: Use `iperf3Parameters.iperf3Binary.absolutePath` for execution
-
-### Troubleshooting
-- **Missing iperf3 binary**: Verify assets exist and `aaptOptions.noCompress` is set in app/build.gradle.kts
-- **Permission denied (errno=13)**: Expected on Android 10+ without root; binary extracted to cache dir still blocked by SELinux
-- **Gradle sync fails**: Try `./gradlew --stop` then refresh
-- **Test instrumentation fails**: Ensure emulator/API level matches test requirements (check manifest minSdk/targetSdk)
+## Troubleshooting
+- **Permission denied (errno=13)**: SELinux blocks native execution. Pre-deploy script handles this for debug builds. Production deployment requires rooted device or full NDK integration.
+- **Gradle sync fails**: `./gradlew --stop` then retry
+- **CMake build errors**: Ensure NDK 28.1.13356709 is installed (set in `app/build.gradle.kts`)
