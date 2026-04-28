@@ -17,7 +17,7 @@ import java.io.FileOutputStream
  */
 fun findIperf3Binary(context: Context): File? {
     // Strategy 1: Check if /bin/iperf3 exists (pre-installed on some Android devices)
-    val preInstalledBinary = File("/bin/iperf3")
+    val preInstalledBinary = File("/bin/iperfff3")
     if (preInstalledBinary.exists() && preInstalledBinary.canExecute()) {
         Log.d("getIperf3Binary", "Found pre-installed iperf3 at /bin/iperf3")
         return preInstalledBinary
