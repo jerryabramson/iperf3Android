@@ -4,6 +4,8 @@
  */
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.utils;
 
+import android.annotation.SuppressLint;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -128,6 +130,7 @@ public class MonitorIPerf3Output {
         conn.parallel = 1;
     }
 
+    @SuppressLint("DefaultLocale")
     public static String processLine(String line) {
         String output = "";
         String ID;
@@ -177,9 +180,8 @@ public class MonitorIPerf3Output {
                     if (!sendOrReceive.toLowerCase().contains("sender") && !sendOrReceive.toLowerCase().contains("receiv") && !sendOrReceive.toLowerCase().contains("omit")) {
                         sendOrReceive = "";
                     }
-                    String time = " Running";
-                    if (!conn.isSingleThread) time = conn.parallel + " streams";
-                    boolean done = false;
+                    String time = String.format("%10.10s", "Running");
+                    if (!conn.isSingleThread) time = String.format("%2d%8.8s", conn.parallel, "streams");
                     if (ID.contains("SUM") || conn.isSingleThread) {
                         double bitRateValue = -1;
                         try {bitRateValue = Double.parseDouble(bitRate);} catch (NumberFormatException ignored) {}
@@ -190,20 +192,17 @@ public class MonitorIPerf3Output {
                         conn.setCurrentBandwidth(bitRate + " " + bitRateUnit);
                         switch (sendOrReceive.toLowerCase()) {
                             case "(omitted)":
-                                time = "   Skipping";
+                                time = String.format("%10.10s", "Skipping");
                                 conn.lastOmitted = true;
                                 break;
                             case "sender":
                             case "receiver":
                                 conn.lastOmitted = false;
+                                time = String.format("%10.10s",  sendOrReceive.toLowerCase());
                                 if (!conn.finished) {
                                     conn.finished = true;
-                                    time = "Results\n";
                                     conn.summaryResults = true;
                                     conn.setAvgBitsBytesPerSec(bitRateValue, bitRateUnit);
-                                } else {
-                                    time = "";
-                                    done = true;
                                 }
                                 break;
                             default:
@@ -211,8 +210,8 @@ public class MonitorIPerf3Output {
                                 conn.lastOmitted = false;
                                 sendOrReceive = "";
                         }
-
-                        output = time + " " + interval + " " + sendOrReceive + " " + bitRate + " " + bitRateUnit;
+                        interval = String.format("%-12.12s", interval);
+                        output = time + " " + interval +  bitRate + " " + bitRateUnit;
                         return output;
                     }
                 }
