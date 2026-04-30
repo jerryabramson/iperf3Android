@@ -11,10 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.findIperf3Binary
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.view.RunIperf3Screen
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.Iperf3RunViewModel
-import java.io.File
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -27,9 +25,8 @@ class MainActivity : ComponentActivity() {
                 color = MaterialTheme.colorScheme.background
             ) {
                 val context = LocalContext.current
-                val iperf3Binary: File? = findIperf3Binary(context)
                 val viewModel: Iperf3RunViewModel = hiltViewModel()
-                RunIperf3Screen(iperf3Binary = iperf3Binary, viewModel = viewModel)
+                RunIperf3Screen(viewModel = viewModel)
             }
         }
     }

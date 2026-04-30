@@ -7,15 +7,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
@@ -45,7 +48,6 @@ import edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme.Iperf3Netwo
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme.mesloFontFamily
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.DefaultUIValues
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.Iperf3RunViewModel
-import java.io.File
 
 
 @Composable
@@ -56,12 +58,10 @@ fun MyScreen() {
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RunIperf3Screen(iperf3Binary: File?,
-                    viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewModel>())
+fun RunIperf3Screen(viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewModel>())
 {
     Iperf3NetworkTesterTheme(content = {
         val uiState by viewModel.uiStateFlow.collectAsState()
-        viewModel.setupIperf3Executable(iperf3Binary)
 
         val mesloMonoStyle = TextStyle(
             fontFamily = mesloFontFamily(),
@@ -100,16 +100,7 @@ fun RunIperf3Screen(iperf3Binary: File?,
                 TopAppBar(title = { Text("iperf3 Performance Tester") })
             },
             bottomBar = {
-                Text("CS683-MobileDevelopment Project Jerold Abramson", fontSize =  10.sp)
-                Text(
-                    "${uiState.iperf3Parameters.iperf3Binary}",
-                    style = mesloMonoStyle,
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 6.sp,
-                    modifier = Modifier
-                        .padding(start = 16.dp)
-                        .fillMaxWidth()
-                )
+                Text("CS683-MobileDevelopment Project Jerold Abramson", fontSize =  16.sp)
             }
         )
         { padding ->
@@ -132,7 +123,7 @@ fun RunIperf3Screen(iperf3Binary: File?,
                         placeholder = { Text(DefaultUIValues.HOST_NAME) },
                         modifier = Modifier
                             .padding(end = 30.dp),
-                        label = { Text("Host Name or IP Address") },
+                        label = { Text("Host Name:port") },
                         colors = baseTextFieldColors,
                         singleLine = true,
                         keyboardActions = KeyboardActions(onDone = {
@@ -239,11 +230,11 @@ fun RunIperf3Screen(iperf3Binary: File?,
                         LazyColumn(modifier = Modifier.fillMaxWidth()) {
                             items(uiState.results.size) { index ->
                                 Text(
-                                    uiState.results[index],
+                                    style = mesloMonoStyle,
+                                    text = uiState.results[index],
                                     modifier = Modifier.fillMaxWidth(),
                                     textAlign = TextAlign.Left,
                                     fontSize = 16.sp,
-                                    style = MaterialTheme.typography.titleMedium,
                                     color = color
                                 )
                             }
@@ -253,7 +244,7 @@ fun RunIperf3Screen(iperf3Binary: File?,
 
                 if (uiState.isRunning) {
                     Column(
-                        Modifier.fillMaxWidth().padding(start = 10.dp)
+                        Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp)
                     ) {
                         if (uiState.latestLine.isEmpty()) {
                             Text(
@@ -296,20 +287,26 @@ fun RunIperf3Screen(iperf3Binary: File?,
                             style = MaterialTheme.typography.titleLarge
                         )
                         HorizontalDivider(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
                             thickness = 2.dp,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Text(
-                            "Min ${uiState.minimum}, Max ${uiState.maximum}",
-                            color = MaterialTheme.colorScheme.primary,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                            style = MaterialTheme.typography.titleMedium
-                        )
+                        Row(modifier = Modifier.padding(start = 10.dp, end = 10.dp)) {
+                            Text(
+                                modifier = Modifier.padding(start =  10.dp),
+                                text = uiState.minimum,
+                                color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                modifier = Modifier.padding(start =  40.dp),
+                                text = uiState.maximum,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                textAlign = TextAlign.Right,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
                         Spacer(modifier = Modifier.height(4.dp))
-
                     }
                 }
 
@@ -330,7 +327,7 @@ fun RunIperf3Screen(iperf3Binary: File?,
                                     color = MaterialTheme.colorScheme.error,
                                     textAlign = TextAlign.Left,
                                     style = mesloMonoStyle,
-                                    fontSize = 10.sp,
+                                    fontSize = 14.sp,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                 )
@@ -339,10 +336,10 @@ fun RunIperf3Screen(iperf3Binary: File?,
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
-                if (((uiState.isVerbose || uiState.isDebugging)  && (uiState.isRunning || uiState.isFinished) && uiState.iperf3Messages.isNotEmpty())) {
+                if (((uiState.isVerbose || uiState.isDebugging || uiState.iperf3Messages.size <= 1)  && (uiState.isRunning || uiState.isFinished) && uiState.iperf3Messages.isNotEmpty())) {
                     Spacer(modifier = Modifier.height(1.dp))
                     HorizontalDivider(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
                         thickness = 4.dp,
                         color = MaterialTheme.colorScheme.tertiary
                     )
@@ -354,11 +351,24 @@ fun RunIperf3Screen(iperf3Binary: File?,
                                     text = uiState.iperf3Messages[index],
                                     textAlign = TextAlign.Left,
                                     style = mesloMonoStyle,
-                                    fontSize = 10.sp,
+                                    fontSize = 14.sp,
                                     modifier = Modifier
-                                        .fillMaxWidth()
+                                        .fillMaxWidth().padding(start = 10.dp, end = 10.dp)
                                 )
                             }
+                        }
+                    }
+                    if (!uiState.isFinished && uiState.latestLine.isEmpty()) {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                        if (!uiState.isDebugging) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            HorizontalDivider(
+                                modifier = Modifier.fillMaxWidth()
+                                    .padding(start = 10.dp, end = 10.dp),
+                                thickness = 4.dp,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+
                         }
                     }
                 }
@@ -368,13 +378,13 @@ fun RunIperf3Screen(iperf3Binary: File?,
                 if (uiState.isDebugging) {
                     Spacer(modifier = Modifier.height(4.dp))
                     HorizontalDivider(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
                         thickness = 4.dp,
                         color = MaterialTheme.colorScheme.tertiary
                     )
                     LazyColumn(modifier = Modifier.fillMaxWidth()) {
                         items(uiState.outputLines.size) { index ->
-                            Row(modifier = Modifier.fillMaxWidth()) {
+                            Row(modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp)) {
                                 Text(
                                     text = uiState.outputLines[index],
                                     textAlign = TextAlign.Left,

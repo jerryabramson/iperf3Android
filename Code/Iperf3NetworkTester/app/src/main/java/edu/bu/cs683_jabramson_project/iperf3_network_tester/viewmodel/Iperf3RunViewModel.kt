@@ -2,13 +2,12 @@ package edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel
 
 
 
-import android.content.Context
+
 import android.util.Log
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.DefaultGroupName
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.Update
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3ResultsData
@@ -20,13 +19,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
 import java.util.Locale.getDefault
 import javax.inject.Inject
+import kotlin.random.Random
 
 
 object DefaultUIValues {
     const val HOST_NAME = "jabramson.com"
+    const val PORT_NUMBER = 5201
     const val PARALLEL_STREAMS = "8"
     const val DURATION = "10"
     const val SKIP = "2"
@@ -46,6 +46,7 @@ data class UiData(
     val iperf3Messages: MutableList<String> = emptyList<String>().toMutableList(),
     val results: MutableList<String> = emptyList<String>().toMutableList(),
     val hostName: String = "",
+    val portNumber: Int = 0,
     val latestLine: String = "",
     val bandWidth: String = "",
     val minimum: String = "",
@@ -77,7 +78,6 @@ class Iperf3RunViewModel @Inject constructor (
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    var iperf3Binary: File = File("")
     val tag = "Iperf3RunViewModel"
 
     private val iperf3Parameters: Iperf3Parameters = Iperf3Parameters()
@@ -85,19 +85,6 @@ class Iperf3RunViewModel @Inject constructor (
     private val _uiStateFlow = MutableStateFlow(UiData(iperf3Parameters))
     val uiStateFlow: StateFlow<UiData> = _uiStateFlow.asStateFlow()
     private var iperfManager: IperfTestManage? = null
-
-    /**
-     * Set the iperf3 executable. Should be the first thing called
-     * by user interface
-     */
-    fun setupIperf3Executable(iperf3Binary: File?) {
-        if (iperf3Binary != null) {
-            this.iperf3Binary = iperf3Binary
-            uiStateFlow.value.iperf3Parameters.iperf3Binary = iperf3Binary
-        } else {
-            Log.e(tag, "iperf3Binary is null")
-        }
-    }
 
     /**
      * Initialize the UI state.
@@ -113,6 +100,7 @@ class Iperf3RunViewModel @Inject constructor (
                 iperf3Messages = emptyList<String>().toMutableList(),
                 results = emptyList<String>().toMutableList(),
                 hostName = "",
+                portNumber = 0,
                 latestLine = "",
                 minimum = "",
                 maximum = "",
@@ -149,9 +137,9 @@ class Iperf3RunViewModel @Inject constructor (
                     lastLine = it.latestLine,
                     bandWidth = MonitorIPerf3Output.getCurrentBandwidth(),
                     latestLine = formattedResult,
-                    average = MonitorIPerf3Output.getAverageBitsBytesPerSec(),
-                    minimum = MonitorIPerf3Output.getMinimumBitsBytesPerSec(),
-                    maximum = MonitorIPerf3Output.getMaximumBitsBytesPerSec(),
+                    average = if (MonitorIPerf3Output.getAverageBitsBytesPerSec().isNotEmpty()) "Avg ${MonitorIPerf3Output.getAverageBitsBytesPerSec()}"  else "",
+                    minimum = if (MonitorIPerf3Output.getMinimumBitsBytesPerSec().isNotEmpty()) "Min ${MonitorIPerf3Output.getMinimumBitsBytesPerSec()}" else "",
+                    maximum = if (MonitorIPerf3Output.getMaximumBitsBytesPerSec().isNotEmpty()) "Max ${MonitorIPerf3Output.getMaximumBitsBytesPerSec()}" else "",
                     outputLines = it.outputLines.also { if (formattedResult.isNotEmpty()) it.add(formattedResult) },
                     iperf3Messages = it.iperf3Messages.also { it.addAll(lastMessages) }
                 )
@@ -176,6 +164,20 @@ class Iperf3RunViewModel @Inject constructor (
      * Launch the iperf3 binary (notice that this is an asynchronous operation).
      */
     fun launch() {
+        var tempHostName = _uiStateFlow.value.hostName
+        if (tempHostName.isEmpty()) tempHostName = DefaultUIValues.HOST_NAME
+        var tempPortNumber = _uiStateFlow.value.portNumber
+        if (tempHostName.contains(":")) {
+            val parts = tempHostName.split(":")
+            if (parts.size == 2) {
+                tempPortNumber = myInt(parts[1])
+                tempHostName = parts[0]
+            }
+        }
+        if (tempPortNumber == 0) tempPortNumber = DefaultUIValues.PORT_NUMBER
+        _uiStateFlow.value.iperf3Parameters.serverHost = tempHostName
+        _uiStateFlow.value.iperf3Parameters.serverPort = tempPortNumber
+
         // Update the UI active running state with empty values for the start of the test.
         _uiStateFlow.update {
             it.copy(isRunning = true,
@@ -192,12 +194,14 @@ class Iperf3RunViewModel @Inject constructor (
                 progress = 0f,
                 lastLine = "",
                 // Ensure the user can see selections during the run
-                hostName =  it.hostName.ifEmpty() { DefaultUIValues.HOST_NAME },
+                hostName =  "${tempHostName}:${tempPortNumber}",
+                portNumber = tempPortNumber,
                 skip =  it.skip.ifEmpty { DefaultUIValues.SKIP },
                 durationSecs = it.durationSecs.ifEmpty { DefaultUIValues.DURATION },
                 parallelStreams = it.parallelStreams.ifEmpty { DefaultUIValues.PARALLEL_STREAMS }
             )
         }
+
 
         /*
          * Launch the iperf3 binary asynchronously.
@@ -229,13 +233,9 @@ class Iperf3RunViewModel @Inject constructor (
         try {
             // Prepare the UI state for the test.
 
-            // Make sure we always have this available!
-            _uiStateFlow.value.iperf3Parameters.iperf3Binary = this.iperf3Binary
-
             // Refresh model state with provided UI choices - booleans
             _uiStateFlow.value.iperf3Parameters.isReverse = _uiStateFlow.value.isReverse
             _uiStateFlow.value.iperf3Parameters.forceFlush = _uiStateFlow.value.forceFlush
-            _uiStateFlow.value.iperf3Parameters.serverHost = _uiStateFlow.value.hostName.ifEmpty { DefaultUIValues.HOST_NAME }
 
             // Numerics
             _uiStateFlow.value.iperf3Parameters.parallelStreams = myInt(_uiStateFlow.value.parallelStreams.ifEmpty { DefaultUIValues.PARALLEL_STREAMS })
@@ -247,40 +247,19 @@ class Iperf3RunViewModel @Inject constructor (
             MonitorIPerf3Output.setParallel(_uiStateFlow.value.iperf3Parameters.parallelStreams)
             MonitorIPerf3Output.setSingleThread(_uiStateFlow.value.iperf3Parameters.parallelStreams == 1)
 
-//            iperfManager = IperfTestManage(
-//                updateProgress = ::updateProgress,                     // floating point track of progress
-//                stdout = ::saveOutputLine,                             // output from iperf3
-//                stderr = ::saveErrorLine,                              // errors from iperf3
-//                iperf3Parameters = _uiStateFlow.value.iperf3Parameters  // parameters for iperf3
-//            )
 
             iperfManager = IperfTestManage(
 
-                updateProgress = ::updateProgress,                     // floating point track of progress
-                stdout = ::saveOutputLine,                             // output from iperf3
-                stderr = ::saveErrorLine,                              // errors from iperf3
+                updateProgress = ::updateProgress,                       // floating point track of progress
+                stdout = ::saveOutputLine,                               // output from iperf3
+                stderr = ::saveErrorLine,                                // errors from iperf3
                 iperf3Parameters = _uiStateFlow.value.iperf3Parameters,  // parameters for iperf3
-//                startBtn = startBtn,
-//                outputView = outputView,
-//                scrollView = scrollView,
-//                isAutoScrollEnabled = { isAutoScrollEnabled },
-//                timestamp = timestamp,
-//                startTimer = { IperfRunner.startTimer(timerView) },
-//                stopTimer = { IperfRunner.stopTimer(timerView) },
                 onTestComplete = { completeTest() },
             )
-//                isAutoReduceEnabled = { autoReduceCheckbox.isChecked }
             updateProgress(0f)
             iperfManager?.startTest()
 
 
-            // Run the iperf3 binary with the provided parameters.
-//            rc = iperf3Runner(
-//                updateProgress = ::updateProgress,                     // floating point track of progress
-//                stdout = ::saveOutputLine,                             // output from iperf3
-//                stderr = ::saveErrorLine,                              // errors from iperf3
-//                iperf3Parameters = _uiStateFlow.value.iperf3Parameters  // parameters for iperf3
-//            )
         } catch (e: Exception) {
             /* Shouldn't ever get here, since guards are already in place */
             Log.e(tag, "Failed to run iperf3: ${e.message}", e)
@@ -288,14 +267,7 @@ class Iperf3RunViewModel @Inject constructor (
             rc = -1
         }
 
-//        // Temporary hack until I understand the issue with numeric values being lost
-//        _uiStateFlow.update {
-//            it.copy(
-//                parallelStreams = it.iperf3Parameters.parallelStreams.toString(),
-//                durationSecs = it.iperf3Parameters.durationSecs.toString(),
-//                skip = it.iperf3Parameters.skip.toString()
-//            )
-//        }
+
 
         //Update the UI state to show that the test is finished and
         // Provide the return code to the UI.
@@ -330,25 +302,20 @@ class Iperf3RunViewModel @Inject constructor (
     }
 
     fun completeTest() {
-//        _uiStateFlow.update {it.copy(results = it.results.also { it.add("Average: ${MonitorIPerf3Output.getAverageBitsBytesPerSec()}")})}
-//        _uiStateFlow.update {it.copy(results = it.results.also { it.add("Maximum: ${MonitorIPerf3Output.getMaximumBitsBytesPerSec()}")})}
-//        _uiStateFlow.update {it.copy(results = it.results.also { it.add("Minimum: ${MonitorIPerf3Output.getMinimumBitsBytesPerSec()}")})}
-//        // Provide the return code to the UI.
-//        // Clear the hostName field for the UI.
-//        _uiStateFlow.update {
-//            it.copy(
-//                returnCode = 0,
-//                isRunning = false,
-//                isFinished = true,
-//
-//                // Only remember last choices for non-default user selections
-//                hostName =  if (it.hostName != DefaultUIValues.HOST_NAME) it.hostName else "",
-//                skip =  if (it.skip != DefaultUIValues.SKIP) it.skip else "",
-//                durationSecs = if (it.durationSecs != DefaultUIValues.DURATION) it.durationSecs else "",
-//                parallelStreams = if (it.parallelStreams != DefaultUIValues.PARALLEL_STREAMS) it.parallelStreams else ""
-//            )
-//        }
-
+        var tempHostName = _uiStateFlow.value.hostName
+        var tempPortNumber = _uiStateFlow.value.portNumber
+        if (tempHostName.isEmpty()) tempHostName = DefaultUIValues.HOST_NAME
+         if (tempHostName.contains(":")) {
+            val parts = tempHostName.split(":")
+            if (parts.size == 2) {
+                tempHostName = parts[0]
+                tempPortNumber = myInt(parts[1])
+            }
+        }
+        if (tempPortNumber != DefaultUIValues.PORT_NUMBER) tempHostName = _uiStateFlow.value.hostName
+        _uiStateFlow.update {
+            it.copy(hostName = tempHostName)
+        }
     }
 
     /**
@@ -368,9 +335,21 @@ class Iperf3RunViewModel @Inject constructor (
      * @param host The new host name.
      */
     fun updateHostName(host: String) {
+        var tempPortNumber = _uiStateFlow.value.portNumber
+        if (host.contains(":")) {
+            val parts = host.split(":")
+            if (parts.size == 2) {
+                tempPortNumber = myInt(parts[1])
+            }
+        }
+        if (tempPortNumber == 0) {
+            tempPortNumber = DefaultUIValues.PORT_NUMBER
+        }
+
         _uiStateFlow.update {
             it.copy(
                 hostName = host,
+                portNumber = tempPortNumber,
                 iperf3Parameters = iperf3Parameters.copy(serverHost = host)
             )
         }

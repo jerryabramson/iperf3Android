@@ -1,10 +1,8 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.model
 
-import java.io.File
-
 data class Iperf3Parameters(
-    var iperf3Binary:File = File(""),
     var serverHost: String = "",
+    var serverPort: Int = 0,
     var durationSecs: Int = 0,
     var results: Iperf3ResultsData = Iperf3ResultsData(),
     var isReverse: Boolean = false,

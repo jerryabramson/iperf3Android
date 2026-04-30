@@ -51,6 +51,7 @@ class IperfTestManage(
         //val command = iperf3Parameters.iperf3Binary.absolutePath
         var flush = ""
         var reverse = ""
+        val serverPort = iperf3Parameters.serverPort
         val parallelStreams = iperf3Parameters.parallelStreams
         if (iperf3Parameters.forceFlush) flush = "--forceflush"
         if (iperf3Parameters.isReverse) reverse = "--reverse"
@@ -65,6 +66,7 @@ class IperfTestManage(
         val currentArgs = arrayOf(
             "iperf3",
             "--client", iperf3Parameters.serverHost,
+            "--port", "$serverPort",
             reverse,
             flush,
             "--parallel", parallelStreams.toString(),

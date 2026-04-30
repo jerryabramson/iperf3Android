@@ -11,7 +11,7 @@ plugins {
 
 
 android {
-    compileSdk = 36
+    compileSdk = 37
     ndkVersion = "28.1.13356709"
     defaultConfig {
         applicationId = "edu.bu.cs683_jabramson_project.iperf3_network_tester"
@@ -42,12 +42,6 @@ android {
         }
     }
     
-    // Prevent compression of iperf3 binaries in assets
-    aaptOptions {
-        noCompress += "iperf3"
-    }
-
-    // ... rest of your android configuration (buildFeatures, compileOptions, etc.) ...
 
 
     buildTypes {
@@ -66,7 +60,7 @@ android {
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.28.0"
+            version = "3.31.11"
         }
     }
 
@@ -76,43 +70,6 @@ android {
 }
 
 
-
-// 1. Define the Exec task (runs your shell script)
-val deployPrepScript by tasks.register("deployPrepScript", Exec::class.java) {
-    val rootDir = project.rootDir
-    val localProperties = File(rootDir, "local.properties")
-    if (localProperties.exists()) {
-        val properties: Properties = Properties()
-        localProperties.inputStream().use {
-            properties.load(it)
-            var sdkDir = properties.getProperty("sdk.dir")
-            val exeName = if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
-                "adb.exe"
-
-            } else {
-                "adb"
-            }
-            val scriptName = if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
-                "pre-deploy.bat"
-            } else {
-                "pre-deploy.sh"
-            }
-            var adb = Paths.get(sdkDir, "platform-tools", exeName)
-            var scriptExecutable = Paths.get("$projectDir", "scripts", scriptName)
-            commandLine = listOf(scriptExecutable.toString())
-            environment("ANDROID_HOME", sdkDir)
-            environment("ADB_EXECUTABLE", adb)
-        }
-    }
-}
-
-// 2. Make 'installDebug' (used by AS Run button) depend on your script
-//    This runs your script BEFORE installing the APK to emulator/device
-afterEvaluate {
-    tasks.named("assembleDebug") {
-        dependsOn(deployPrepScript)
-    }
-}
 
 dependencies {
     implementation(libs.androidx.core.ktx)
