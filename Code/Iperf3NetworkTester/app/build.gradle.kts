@@ -24,7 +24,8 @@ android {
         // ✅ Required for native builds
         externalNativeBuild {
             cmake {
-                cFlags += listOf("-std=c11")
+                cFlags += listOf("-std=c11", "-D__STDC_NO_ATOMICS__=0")
+
             }
         }
 
