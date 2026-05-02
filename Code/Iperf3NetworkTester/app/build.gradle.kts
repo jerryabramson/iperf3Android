@@ -24,8 +24,7 @@ android {
         // ✅ Required for native builds
         externalNativeBuild {
             cmake {
-                cFlags += listOf("-std=c11", "-D__STDC_NO_ATOMICS__=0")
-
+                cFlags += listOf("-std=c11")
             }
         }
 
@@ -60,7 +59,7 @@ android {
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
+            version = "3.28.0"
         }
     }
 
