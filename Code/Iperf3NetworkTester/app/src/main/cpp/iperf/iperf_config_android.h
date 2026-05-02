@@ -35,7 +35,7 @@
 #undef HAVE_SO_BINDTODEVICE             // Not supported in Android user space
 #define HAVE_SO_MAX_PACING_RATE 1       // Controls pacing rate (useful on Android ≥ Q)
 #undef HAVE_SSL                         // Requires OpenSSL — disabled by default
-#undef HAVE_STDATOMIC_H                // Android NDK might lack full support
+#define HAVE_STDATOMIC_H                // Android NDK now provides full support
 #define HAVE_STDINT_H 1                 // Standard integer types
 #define HAVE_STDIO_H 1                  // Standard C I/O
 #define HAVE_STDLIB_H 1                 // Memory, process, conversions
