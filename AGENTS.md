@@ -2,60 +2,61 @@
 
 ## Project Overview
 - Android Jetpack Compose app, Kotlin + Java, AGP 9.1.1, Kotlin 2.3.20
-- Hilt DI via KSP (not KAPT), Room declared but not yet integrated
+- Hilt DI via KSP (not KAPT), Room declared but not integrated
 - Package: `edu.bu.cs683_jabramson_project.iperf3_network_tester`
-- Project root: `Code/Iperf3NetworkTester/` (camelCase, no underscore)
+- Project root: `Code/Iperf3NetworkTester/`
 
-## Dual iperf3 Execution -- JNI is Active
-
-iperf3 runs via **JNI**, not subprocess. CMake compiles iperf3 3.19 source into `libcellularlib.so`:
-- CMake config: `app/src/main/cpp/CMakeLists.txt`
-- JNI bridge: `runner/IperfJNIRunner.kt` loads `System.loadLibrary("cellularlab")`
-- Test orchestration: `runner/IperfTestManage.kt` calls `IperfRunner.runIperfLive()`
+## iperf3 Execution -- JNI is Active
+CMake compiles iperf3 3.19 source into `libcellularlab.so`:
+- CMake: `app/src/main/cpp/CMakeLists.txt` (sources under `app/src/main/cpp/iperf/`)
+- JNI bridge: `runner/IperfJNIRunner.kt` loads `System.loadLibrary("cellularlab")`, exposes `runIperfLive()`
+- Test orchestration: `runner/IperfTestManage.kt` calls `IperfRunner.runIperfLive()` with callback-based output
 - Output parsing: `utils/MonitorIPerf3Output.java` (Java, not Kotlin)
 
-The older subprocess-based `runner/iperf3Runner.kt` is present but not called by the active code path.
-
-### Binary Assets Still Present
-- `src/main/assets/iperf3_binaries/<abi>/iperf3` -- pre-compiled binaries (4 ABIs)
-- `aaptOptions.noCompress += "iperf3"` in `app/build.gradle.kts`
-- `findIperf3Binary()` in `utils/findIperf3Binary.kt` still extracts to `cacheDir` but is only used to populate `iperf3Binary` path in UI state (not for execution)
-- **Bug**: `findIperf3Binary.kt:20` checks `/bin/iperfff3` (three f's -- typo)
+**No subprocess execution path exists.** The old `iperf3Runner.kt` has been removed. No iperf3 binaries are bundled in assets -- only images remain there.
 
 ## Build & Commands
-
 All commands from `Code/Iperf3NetworkTester/`:
 
 ```bash
-./gradlew :app:assembleDebug      # Build debug APK
+./gradlew :app:assembleDebug      # Build debug APK (requires connected device for pre-deploy step)
 ./gradlew :app:assembleRelease    # Build release APK
-./gradlew :app:testDebugUnitTest  # Unit tests (stub only)
+./gradlew :app:testDebugUnitTest  # Unit tests (stub only, passes)
 ./gradlew :app:connectedAndroidTest  # Instrumented tests (needs device/emulator)
 ```
 
-### Pre-deploy SELinux Workaround
-`assembleDebug` depends on `deployPrepScript`, which runs `app/scripts/pre-deploy.sh`. This script disables SELinux enforcement (`setenforce 0`) on the connected device/emulator via adb. It runs automatically before every debug build.
-
-There is **no** `startEmulator` Gradle task. Start emulator manually via Android Studio or `avdmanager`.
+**No `startEmulator` Gradle task.** Start emulator manually via Android Studio or `avdmanager`.
 
 ## Build Quirks
-- `abiFilters`: armeabi-v7a, arm64-v8a, x86, x86_64
-- `packaging.jniLibs.pickFirsts`: Prevents `libc++_shared.so` duplicates across ABIs
-- Resolution strategy: Forces `org.jetbrains:annotations:23.0.0`, excludes `com.intellij:annotations`
-- Duplicate Room dependency declarations in `app/build.gradle.kts` (harmless but messy)
-- `local.properties` with `sdk.dir` is required for pre-deploy script
+- **Gradle wrapper**: 9.3.1 (not the version in CLAUDE.md)
+- **compileSdk = 37**, minSdk = 26, targetSdk = 36
+- **NDK**: 28.1.13356709 (set in `app/build.gradle.kts`)
+- **abiFilters**: armeabi-v7a, arm64-v8a, x86, x86_64
+- **packaging.jniLibs.pickFirsts**: Prevents `libc++_shared.so` duplicates across ABIs
+- **Resolution strategy** in `build.gradle.kts`: forces `org.jetbrains:annotations:23.0.0`, excludes `com.intellij:annotations`
+- **Duplicate Room deps** in `app/build.gradle.kts` (harmless but messy -- both KSP and commented-out KAPT declarations)
 
 ## Architecture
-- **Single activity**: `MainActivity` (Hilt `@AndroidEntryPoint`) always renders `RunIperf3Screen`
+- **Single activity**: `MainActivity` (`@AndroidEntryPoint`) always renders `RunIperf3Screen` -- no binary check, no routing
 - **ViewModel**: `Iperf3RunViewModel` (`@HiltViewModel`) with `MutableStateFlow<UiData>`
-- **UI**: `view/Iperf3View.kt` contains `RunIperf3Screen`; supporting composables in `view/`
-- **Theme**: `ui/theme/` with custom MesloLGS NF monospace font
+- **UI**: `view/Iperf3View.kt` contains `RunIperf3Screen`; supporting composables in `view/` (UploadDownloadRadioButton, DebugOnOffRadioButton, ForceFlushRadioButton)
+- **Theme**: `ui/theme/` with custom MesloLGS NF monospace font (`mesloFontFamily.kt`)
+- **Model**: `model/Iperf3Parameters.kt`, `model/Iperf3ResultsData.kt`
 
 ## Testing
 - Only template stubs exist (`ExampleUnitTest`, `ExampleInstrumentedTest`)
 - No lint configuration -- skip lint step
 
 ## Troubleshooting
-- **Permission denied (errno=13)**: SELinux blocks native execution. Pre-deploy script handles this for debug builds. Production deployment requires rooted device or full NDK integration.
-- **Gradle sync fails**: `./gradlew --stop` then retry
 - **CMake build errors**: Ensure NDK 28.1.13356709 is installed (set in `app/build.gradle.kts`)
+- **Gradle sync fails**: `./gradlew --stop` then retry
+- **No pre-deploy script exists** -- the old SELinux workaround (`pre-deploy.sh`, `deployPrepScript` Gradle task) has been removed
+
+## Stale References (do NOT look for these)
+- ~~`runner/iperf3Runner.kt``~~ -- removed, subprocess path deleted
+- ~~`utils/findIperf3Binary.kt`~~ -- removed, no binary extraction
+- ~~`app/scripts/pre-deploy.sh`~~ -- removed
+- ~~`StubbedIperf3Screen`~~ -- removed
+- ~~`ProcessRunnerViewModel`~~ -- removed
+- ~~`ProcessOutputScreen`~~ -- removed
+- ~~`assets/iperf3_binaries/`~~ -- removed, only images remain
