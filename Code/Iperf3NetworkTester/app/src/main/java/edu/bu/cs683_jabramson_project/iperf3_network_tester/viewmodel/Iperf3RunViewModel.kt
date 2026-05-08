@@ -1,19 +1,16 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel
 
-
-
-
 import android.util.Log
-import androidx.compose.ui.graphics.vector.DefaultGroupName
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3ResultsData
-//import edu.bu.cs683_jabramson_project.iperf3_network_tester.runner.IperfRunner
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.runner.IperfTestManage
-import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.MonitorIPerf3Output
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Iperf3OutputMonitor
+
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Locale.getDefault
 import javax.inject.Inject
-import kotlin.random.Random
+
 
 
 object DefaultUIValues {
@@ -64,6 +61,7 @@ data class UiData(
     val returnCode: Int = 0,
     val lastLine: String = "",
     val isReverse: Boolean = iperf3Parameters.isReverse,
+    val iperf3OutputMonitor: Iperf3OutputMonitor = Iperf3OutputMonitor(),
 
     )
 
@@ -79,6 +77,7 @@ class Iperf3RunViewModel @Inject constructor (
 ) : ViewModel() {
 
     val tag = "Iperf3RunViewModel"
+
 
     private val iperf3Parameters: Iperf3Parameters = Iperf3Parameters()
     private val iperf3ResultsData: Iperf3ResultsData = Iperf3ResultsData()
@@ -116,7 +115,8 @@ class Iperf3RunViewModel @Inject constructor (
                 bandWidth = "",
                 durationSecs = "",
                 skip =  "",
-                parallelStreams = ""
+                parallelStreams = "",
+                iperf3OutputMonitor = Iperf3OutputMonitor(),
             )
         }
     }
@@ -127,21 +127,22 @@ class Iperf3RunViewModel @Inject constructor (
      * @param aLine The output line from the process execution.
      */
     fun saveOutputLine(aLine: String) {
-        val formattedResult: String = MonitorIPerf3Output.processLine(aLine)
-        if (formattedResult.isNotEmpty() || MonitorIPerf3Output.getIperf3Messages().isNotEmpty()) {
-            Log.d(tag, "stdout: $formattedResult")
-            val lastMessages = MonitorIPerf3Output.getLastIperf3Messages().toMutableList()
+        var lineResult =  _uiStateFlow.value.iperf3OutputMonitor.processLine(aLine)
+        if (lineResult.displayText.isNotEmpty() || lineResult.messages.isNotEmpty()) {
+        //if (formattedResult.isNotEmpty() || MonitorIPerf3Output.getIperf3Messages().isNotEmpty()) {
+            Log.d(tag, "stdout: $aLine")
+            val lastMessages = lineResult.messages.toMutableList()
             if (lastMessages.isNotEmpty()) Log.d(tag, "lastMessages: $lastMessages")
             _uiStateFlow.update {
                 it.copy(
                     lastLine = it.latestLine,
-                    bandWidth = MonitorIPerf3Output.getCurrentBandwidth(),
-                    latestLine = formattedResult,
-                    average = if (MonitorIPerf3Output.getAverageBitsBytesPerSec().isNotEmpty()) "Avg ${MonitorIPerf3Output.getAverageBitsBytesPerSec()}"  else "",
-                    minimum = if (MonitorIPerf3Output.getMinimumBitsBytesPerSec().isNotEmpty()) "Min ${MonitorIPerf3Output.getMinimumBitsBytesPerSec()}" else "",
-                    maximum = if (MonitorIPerf3Output.getMaximumBitsBytesPerSec().isNotEmpty()) "Max ${MonitorIPerf3Output.getMaximumBitsBytesPerSec()}" else "",
-                    outputLines = it.outputLines.also { if (formattedResult.isNotEmpty()) it.add(formattedResult) },
-                    iperf3Messages = it.iperf3Messages.also { it.addAll(lastMessages) }
+                    bandWidth = lineResult.currentBandwidth,   // MonitorIPerf3Output.getCurrentBandwidth(),
+                    latestLine = lineResult.displayText,  //latestLine = formattedResult,
+                    average =  lineResult.currentAvg, //if (MonitorIPerf3Output.getAverageBitsBytesPerSec().isNotEmpty()) "Avg ${MonitorIPerf3Output.getAverageBitsBytesPerSec()}"  else "",
+                    minimum = lineResult.currentMin, //if (MonitorIPerf3Output.getMinimumBitsBytesPerSec().isNotEmpty()) "Min ${MonitorIPerf3Output.getMinimumBitsBytesPerSec()}" else "",
+                    maximum = lineResult.currentMax,//if (MonitorIPerf3Output.getMaximumBitsBytesPerSec().isNotEmpty()) "Max ${MonitorIPerf3Output.getMaximumBitsBytesPerSec()}" else "",
+                    outputLines = it.outputLines.also { if (lineResult.displayText.isNotEmpty()) it.add(lineResult.displayText) },
+                    iperf3Messages = it.iperf3Messages.also { if (lineResult.messages.isNotEmpty()) it.addAll(lineResult.messages) }
                 )
             }
         }
@@ -198,8 +199,10 @@ class Iperf3RunViewModel @Inject constructor (
                 portNumber = tempPortNumber,
                 skip =  it.skip.ifEmpty { DefaultUIValues.SKIP },
                 durationSecs = it.durationSecs.ifEmpty { DefaultUIValues.DURATION },
-                parallelStreams = it.parallelStreams.ifEmpty { DefaultUIValues.PARALLEL_STREAMS }
+                parallelStreams = it.parallelStreams.ifEmpty { DefaultUIValues.PARALLEL_STREAMS },
+                iperf3OutputMonitor = Iperf3OutputMonitor(),
             )
+
         }
 
 
@@ -243,13 +246,9 @@ class Iperf3RunViewModel @Inject constructor (
             _uiStateFlow.value.iperf3Parameters.skip = myInt(_uiStateFlow.value.skip.ifEmpty { DefaultUIValues.SKIP })
 
             // Temp: Setup output parsing (old Java code)
-            MonitorIPerf3Output.resetGathered()
-            MonitorIPerf3Output.setParallel(_uiStateFlow.value.iperf3Parameters.parallelStreams)
-            MonitorIPerf3Output.setSingleThread(_uiStateFlow.value.iperf3Parameters.parallelStreams == 1)
-
-
+            _uiStateFlow.value.iperf3OutputMonitor.reset()
+            _uiStateFlow.value.iperf3OutputMonitor.setParallel(_uiStateFlow.value.iperf3Parameters.parallelStreams)
             iperfManager = IperfTestManage(
-
                 updateProgress = ::updateProgress,                       // floating point track of progress
                 stdout = ::saveOutputLine,                               // output from iperf3
                 stderr = ::saveErrorLine,                                // errors from iperf3
@@ -273,9 +272,9 @@ class Iperf3RunViewModel @Inject constructor (
         // Provide the return code to the UI.
         if (rc == 0) {
             // only update statistics on a successful run
-            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Average: ${MonitorIPerf3Output.getAverageBitsBytesPerSec()}")})}
-            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Maximum: ${MonitorIPerf3Output.getMaximumBitsBytesPerSec()}")})}
-            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Minimum: ${MonitorIPerf3Output.getMinimumBitsBytesPerSec()}")})}
+            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Average: ${_uiStateFlow.value.iperf3OutputMonitor.getAverage()}")})}
+            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Maximum: ${_uiStateFlow.value.iperf3OutputMonitor.getMaximum()}")})}
+            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Minimum: ${_uiStateFlow.value.iperf3OutputMonitor.getMinimum()}")})}
         }else {
             // Only need this on failure conditions
             _uiStateFlow.update {it.copy(results = it.results.also { it.add("Return Code: $rc") })}
