@@ -136,11 +136,11 @@ class Iperf3RunViewModel @Inject constructor (
             _uiStateFlow.update {
                 it.copy(
                     lastLine = it.latestLine,
-                    bandWidth = lineResult.currentBandwidth,   // MonitorIPerf3Output.getCurrentBandwidth(),
-                    latestLine = lineResult.displayText,  //latestLine = formattedResult,
-                    average =  lineResult.currentAvg, //if (MonitorIPerf3Output.getAverageBitsBytesPerSec().isNotEmpty()) "Avg ${MonitorIPerf3Output.getAverageBitsBytesPerSec()}"  else "",
-                    minimum = lineResult.currentMin, //if (MonitorIPerf3Output.getMinimumBitsBytesPerSec().isNotEmpty()) "Min ${MonitorIPerf3Output.getMinimumBitsBytesPerSec()}" else "",
-                    maximum = lineResult.currentMax,//if (MonitorIPerf3Output.getMaximumBitsBytesPerSec().isNotEmpty()) "Max ${MonitorIPerf3Output.getMaximumBitsBytesPerSec()}" else "",
+                    bandWidth = lineResult.currentBandwidth,
+                    latestLine = lineResult.displayText,
+                    average =  lineResult.currentAvg,
+                    minimum = lineResult.currentMin,
+                    maximum = lineResult.currentMax,
                     outputLines = it.outputLines.also { if (lineResult.displayText.isNotEmpty()) it.add(lineResult.displayText) },
                     iperf3Messages = it.iperf3Messages.also { if (lineResult.messages.isNotEmpty()) it.addAll(lineResult.messages) }
                 )
