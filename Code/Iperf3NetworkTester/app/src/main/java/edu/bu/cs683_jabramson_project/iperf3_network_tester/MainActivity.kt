@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme.Iperf3NetworkTesterTheme
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.view.RunIperf3Screen
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.Iperf3RunViewModel
 
@@ -20,13 +21,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.background
-            ) {
-                val context = LocalContext.current
-                val viewModel: Iperf3RunViewModel = hiltViewModel()
-                RunIperf3Screen(viewModel = viewModel)
+            Iperf3NetworkTesterTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    val context = LocalContext.current
+                    val viewModel: Iperf3RunViewModel = hiltViewModel()
+                    RunIperf3Screen(viewModel = viewModel)
+                }
             }
         }
     }

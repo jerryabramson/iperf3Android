@@ -1,5 +1,6 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel
 
+import android.R.attr.tag
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -129,7 +130,6 @@ class Iperf3RunViewModel @Inject constructor (
     fun saveOutputLine(aLine: String) {
         var lineResult =  _uiStateFlow.value.iperf3OutputMonitor.processLine(aLine)
         if (lineResult.displayText.isNotEmpty() || lineResult.messages.isNotEmpty()) {
-        //if (formattedResult.isNotEmpty() || MonitorIPerf3Output.getIperf3Messages().isNotEmpty()) {
             Log.d(tag, "stdout: $aLine")
             val lastMessages = lineResult.messages.toMutableList()
             if (lastMessages.isNotEmpty()) Log.d(tag, "lastMessages: $lastMessages")
@@ -138,11 +138,15 @@ class Iperf3RunViewModel @Inject constructor (
                     lastLine = it.latestLine,
                     bandWidth = lineResult.currentBandwidth,
                     latestLine = lineResult.displayText,
-                    average =  lineResult.currentAvg,
+                    average = lineResult.currentAvg,
                     minimum = lineResult.currentMin,
                     maximum = lineResult.currentMax,
-                    outputLines = it.outputLines.also { if (lineResult.displayText.isNotEmpty()) it.add(lineResult.displayText) },
-                    iperf3Messages = it.iperf3Messages.also { if (lineResult.messages.isNotEmpty()) it.addAll(lineResult.messages) }
+                    outputLines = it.outputLines.also {
+                        if (lineResult.displayText.isNotEmpty()) {
+                            it.add(lineResult.displayText)
+                        }
+                    },
+                    iperf3Messages = lineResult.messages.toMutableList()
                 )
             }
         }
@@ -430,10 +434,19 @@ class Iperf3RunViewModel @Inject constructor (
      */
     fun setUploadDownload(str: String) {
         _uiStateFlow.update {
-            it.copy(isReverse = str.lowercase(getDefault()) == "download")
+            it.copy(isReverse = str.lowercase(getDefault()) == "down")
         }
     }
 
+    /**
+     * User entered a new upload/download.
+     * @param str The new value for upload/download.
+     */
+    fun setDownload(reverse: Boolean) {
+        _uiStateFlow.update {
+            it.copy(isReverse = reverse)
+        }
+    }
 
     /**
      * User entered a new force flush.

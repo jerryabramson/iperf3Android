@@ -7,7 +7,6 @@
 - Project root: `Code/Iperf3NetworkTester/` (relative to repo root)
 
 ## iperf3 Execution -- JNI via CMake
-
 iperf3 3.19 source is compiled into `libcellularlab.so`, not run as a subprocess:
 - **CMake**: `app/src/main/cpp/CMakeLists.txt` compiles iperf3 sources + `iperf_jni.c`
 - **JNI bridge**: `runner/IperfJNIRunner.kt` -- `IperfRunner` object loads `cellularlab`, declares `external fun runIperfLive()`
@@ -33,8 +32,8 @@ MainActivity → RunIperf3Screen → Iperf3RunViewModel.launch()
 - **Default values**: `DefaultUIValues` object (host=jabramson.com, port=5201, duration=10s, streams=8, skip=2)
 - **Font**: MesloLGS NF monospace loaded via `ui/theme/mesloFontFamily.kt`
 
-## Build & Commands
 
+## Build & Commands
 All commands from `Code/Iperf3NetworkTester/`:
 
 ```bash
@@ -46,22 +45,25 @@ All commands from `Code/Iperf3NetworkTester/`:
 
 APK output: `app/build/outputs/apk/debug/app-debug.apk`
 
-## Build Quirks
-- **abiFilters**: armeabi-v7a, arm64-v8a, x86, x86_64 (in `ndk {}` block)
-- **jniLibs.pickFirsts**: Prevents `libc++_shared.so` duplicates across ABIs
-- **Resolution strategy** (outside android/dependencies blocks): forces `org.jetbrains:annotations:23.0.0`, excludes `com.intellij:annotations`
-- **Duplicate Room deps** in `app/build.gradle.kts`: declared twice, neither integrated -- harmless but messy
-- **CMake**: version 3.22.1, C standard c11, defines `__ANDROID__` and `HAVE_PTHREAD`
 
 ## Testing & Lint
 - Only template stubs (`junit`, `espresso-core`) -- no real test coverage
 - No lint configuration
 
+**No `startEmulator` Gradle task.** Start emulator manually via Android Studio or `avdmanager`.
+
+## Build Quirks
+- **Gradle wrapper**: 9.3.1 (not the version in CLAUDE.md)
+- **compileSdk = 37**, minSdk = 26, targetSdk = 36
+- **NDK**: 28.1.13356709 (set in `app/build.gradle.kts`)
+- **abiFilters**: armeabi-v7a, arm64-v8a, x86, x86_64
+- **packaging.jniLibs.pickFirsts**: Prevents `libc++_shared.so` duplicates across ABIs
+- **Resolution strategy** in `build.gradle.kts`: forces `org.jetbrains:annotations:23.0.0`, excludes `com.intellij:annotations`
+- **Duplicate Room deps** in `app/build.gradle.kts` (harmless but messy -- both KSP and commented-out KAPT declarations)
+
 ## Deployment Gotchas
 - **INTERNET permission** declared in AndroidManifest.xml (install-time, not runtime)
 - **No SELinux workaround**: the pre-deploy script and `deployPrepScript` Gradle task referenced in old docs do NOT exist. Debug builds do not auto-disable SELinux.
-- **iperf3 binary must be pushed manually**: `Assets/pushIperf3.sh` (repo root) pushes to `/bin/iperf3` on device/emulator
-- App is a proof-of-concept -- requires rooted device or emulator with preinstalled iperf3
 
 ## Key Files
 | File | Purpose |

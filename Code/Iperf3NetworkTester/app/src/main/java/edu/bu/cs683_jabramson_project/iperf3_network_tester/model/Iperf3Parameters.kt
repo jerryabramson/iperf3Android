@@ -5,7 +5,7 @@ data class Iperf3Parameters(
     var serverPort: Int = 0,
     var durationSecs: Int = 0,
     var results: Iperf3ResultsData = Iperf3ResultsData(),
-    var isReverse: Boolean = false,
+    var isReverse: Boolean = true,
     var forceFlush: Boolean = true,
     var timeout: Long = 0,
     var parallelStreams: Int = 1,

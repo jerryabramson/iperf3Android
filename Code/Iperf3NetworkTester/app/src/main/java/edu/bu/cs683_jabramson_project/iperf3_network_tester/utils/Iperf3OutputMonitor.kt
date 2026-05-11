@@ -21,7 +21,6 @@ class Iperf3OutputMonitor {
     )
 
     // -- accumulated state (private, no static fields) --
-
     private var gathered = false
     private var resultEntry = 0
     private var localHost = ""
@@ -107,13 +106,13 @@ class Iperf3OutputMonitor {
                     connectedString = restOfLine[5]
                     timeout = restOfLine[6]
                     iperf3Messages.add("    Local Host/IP: $localHost")
+                    iperf3Messages.add("       Local Port: $localPort")
                     iperf3Messages.add("   Remote Host/IP: $remoteHost")
                     iperf3Messages.add("      Remote Port: $remotePort")
                     gathered = true
-                } else if (cleanLine.trim().isNotEmpty()) {
-                    iperf3Messages.add(cleanLine)
                 }
-                return LineResult()
+                return LineResult(messages =  iperf3Messages)
+
             }
 
             // Post-gathering: interval / summary data
@@ -176,13 +175,10 @@ class Iperf3OutputMonitor {
                     val displayText = "$timeLabel $formattedInterval$bitRate $bitRateUnit"
 
                     // Collect any messages accumulated since the last call
-                    val pendingMessages = iperf3Messages.toList()
-                    iperf3Messages.clear()
-
                     return LineResult(
                         displayText = displayText,
                         currentBandwidth = currentBandwidth,
-                        messages = pendingMessages,
+                        messages = iperf3Messages,
                         currentMax = max,
                         currentMin = min,
                         currentAvg = "$avgBitsBytesPerSec $avgUnit"
@@ -191,6 +187,13 @@ class Iperf3OutputMonitor {
             }
         } else if (!cleanLine.startsWith("- -") && cleanLine.trim().isNotEmpty()) {
             iperf3Messages.add(cleanLine)
+            return LineResult(
+                displayText = "",
+                messages =  iperf3Messages,
+                currentMax = max,
+                currentMin = min,
+                currentAvg = "$avgBitsBytesPerSec $avgUnit"
+            )
         }
         return LineResult()
     }
