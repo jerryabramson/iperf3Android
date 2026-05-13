@@ -1,18 +1,16 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.runner
 
-import android.content.Context
+
+import android.R.attr.tag
 import android.util.Log
-import android.widget.Button
-import android.widget.ScrollView
-import android.widget.TextView
-import androidx.compose.animation.core.updateTransition
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
-import kotlinx.coroutines.CompletableDeferred
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Iperf3OutputMonitor
+
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+
 
 /**
  * Manages the lifecycle and logic of running iPerf3-based network tests.
@@ -22,13 +20,14 @@ class IperfTestManage(
     val tag: String = "IperfTestManage",
     //private val context: Context,
     var updateProgress: (Float) -> Unit,
-    var stdout: (String) -> Unit,
+    var stdout: (Iperf3OutputMonitor.LineResult, Boolean) -> Unit,
     var stderr: (String) -> Unit,
     var iperf3Parameters: Iperf3Parameters,
     private val onTestComplete: () -> Unit
-    ) {
+) {
 
     private val mainScope = CoroutineScope(Dispatchers.Main)
+    private val iperf3OutputMonitor = Iperf3OutputMonitor()
     @Volatile
     private var isIperfRunning = false
     // endregion
@@ -90,8 +89,11 @@ class IperfTestManage(
             Log.d("IperfTestManage: ", "startTest")
 
             // region Start Actual iPerf Test
-            var intervalCount = 0
-            var started = false
+        var intervalCount = -1L
+        var started = false
+        var numberOfMessages = 0
+        iperf3OutputMonitor.reset()
+        iperf3OutputMonitor.setParallel(parallelStreams)
         val runJob = CoroutineScope(Dispatchers.IO + handler).launch {
             //val runJob = mainScope.launch(handler) {
             isIperfRunning = true
@@ -101,27 +103,29 @@ class IperfTestManage(
                     onLine =
                         {
                             val line = it.trim().removeSuffix("\n")
-                            Log.d(tag, "stdout: $line")
-                            if (line.contains("Interval") && !started) {
+                            var output = iperf3OutputMonitor.processLine(line)
+                            Log.d(tag, "onLine: $line")
+                            if (output.resultEntry > intervalCount && !started) {
                                 started = true
-                                intervalCount = 0
-                            } else {
-                                if (iperf3Parameters.parallelStreams == 1) {
-                                    if (line.contains("[") && line.contains("]")) {
-                                        if (started) intervalCount++
-                                    }
-                                } else {
-                                    if (line.contains("[") && line.contains("]") && line.contains("SUM")) {
-                                        if (started) intervalCount++
+                                intervalCount = output.resultEntry
+                            }
+                            if (output.resultEntry > intervalCount || output.messages.size > numberOfMessages) {
+                                if (started && output.resultEntry > intervalCount) {
+                                    intervalCount = output.resultEntry
+                                    stdout(output, false)
+                                    val progress =
+                                        intervalCount.toFloat() / iperf3Parameters.durationSecs
+                                    if (progress < 1.0) {
+                                        updateProgress(progress)
+                                    } else {
+                                        updateProgress(1.0f)
                                     }
                                 }
-                            }
-                            stdout(line)
-                            val progress = intervalCount.toFloat() / iperf3Parameters.durationSecs
-                            if (progress < 1.0) {
-                                updateProgress(progress)
-                            } else {
-                                updateProgress(1.0f)
+                                if (output.messages.size > numberOfMessages) {
+                                    numberOfMessages = output.messages.size
+                                    stdout(output, true)
+                                }
+
                             }
                         }, onError =
                         {

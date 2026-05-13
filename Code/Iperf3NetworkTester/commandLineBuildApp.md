@@ -71,21 +71,7 @@ adb devices
 # 0123456789ABCDEF    device
 ```
 
-# 7 Install iperf3 onto either the emulator or the real device
-
-```
-cd ../../Assets
-./pushIperf3.sh
-```
-
-*If you get no output from this command, you can only run the stubbed version of the application.*
-
-```
-adb shell ls -ls /bin/iperf3
-108 -rwxr-xr-x 1 root shell 120368 2025-08-06 18:11 /bin/iperf3
-```
-
-# 8 Install & Run the APK on the Device
+# 7 Install & Run the APK on the Device
 
 ```bash
 cd ../../Code
@@ -102,4 +88,4 @@ Success
 If the app was already installed, `-r` forces an upgrade.
 
 
-# 9 Launch the app using the emulator or real device
+# 8 Launch the app using the emulator or real device

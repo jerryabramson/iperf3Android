@@ -406,12 +406,12 @@ private fun BandwidthDisplay(uiState: edu.bu.cs683_jabramson_project.iperf3_netw
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = uiState.minimum,
+                text = uiState.lineResult.currentMin.toString(),
                 color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
-                text = uiState.maximum,
+                text = uiState.lineResult.currentMax.toString(),
                 color = MaterialTheme.colorScheme.tertiary,
                 style = MaterialTheme.typography.titleMedium
             )

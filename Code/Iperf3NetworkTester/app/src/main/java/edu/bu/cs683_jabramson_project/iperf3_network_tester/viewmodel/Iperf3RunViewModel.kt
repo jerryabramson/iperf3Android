@@ -47,9 +47,6 @@ data class UiData(
     val portNumber: Int = 0,
     val latestLine: String = "",
     val bandWidth: String = "",
-    val minimum: String = "",
-    val maximum: String = "",
-    val average: String = "",
     val progress: Float = 0f,
     val durationSecs: String = "",
     val parallelStreams: String = "",
@@ -63,7 +60,9 @@ data class UiData(
     val lastLine: String = "",
     val isReverse: Boolean = iperf3Parameters.isReverse,
     val iperf3OutputMonitor: Iperf3OutputMonitor = Iperf3OutputMonitor(),
-
+    val resultNumber: Long = -1,
+    val numberOfMessages: Int = 0,
+    val lineResult: Iperf3OutputMonitor.LineResult = Iperf3OutputMonitor.LineResult(),
     )
 
 /**
@@ -102,9 +101,6 @@ class Iperf3RunViewModel @Inject constructor (
                 hostName = "",
                 portNumber = 0,
                 latestLine = "",
-                minimum = "",
-                maximum = "",
-                average = "",
                 progress = 0f,
                 isRunning = false,
                 isFinished = false,
@@ -117,7 +113,9 @@ class Iperf3RunViewModel @Inject constructor (
                 durationSecs = "",
                 skip =  "",
                 parallelStreams = "",
-                iperf3OutputMonitor = Iperf3OutputMonitor(),
+                resultNumber = -1,
+                numberOfMessages = 0,
+                lineResult = Iperf3OutputMonitor.LineResult(),
             )
         }
     }
@@ -125,30 +123,39 @@ class Iperf3RunViewModel @Inject constructor (
 
     /**
      * Callback to save an output line from the iperf3 binary.
-     * @param aLine The output line from the process execution.
+     * @param lineResult The output line from the process execution.
      */
-    fun saveOutputLine(aLine: String) {
-        var lineResult =  _uiStateFlow.value.iperf3OutputMonitor.processLine(aLine)
-        if (lineResult.displayText.isNotEmpty() || lineResult.messages.isNotEmpty()) {
-            Log.d(tag, "stdout: $aLine")
-            val lastMessages = lineResult.messages.toMutableList()
-            if (lastMessages.isNotEmpty()) Log.d(tag, "lastMessages: $lastMessages")
+    fun saveOutputLine(lineResult: Iperf3OutputMonitor.LineResult, newMessage: Boolean = false) {
+
+        Log.d(tag, "stdout: $lineResult.rawOutputLine")
+        val lastMessages = lineResult.messages.toMutableList()
+
+        if (newMessage) {
+            lastMessages.forEach { Log.d(tag, "lastMessages: $it") }
+            _uiStateFlow.update {
+                it.copy(
+                    iperf3Messages = lineResult.messages.toMutableList(),
+                    numberOfMessages = lastMessages.size,
+                    lineResult =  lineResult
+                )
+            }
+        } else {
             _uiStateFlow.update {
                 it.copy(
                     lastLine = it.latestLine,
-                    bandWidth = lineResult.currentBandwidth,
-                    latestLine = lineResult.displayText,
-                    average = lineResult.currentAvg,
-                    minimum = lineResult.currentMin,
-                    maximum = lineResult.currentMax,
+                    bandWidth = lineResult.currentBandWidth.toString(),
+                    latestLine = lineResult.rawOutputLine,
                     outputLines = it.outputLines.also {
-                        if (lineResult.displayText.isNotEmpty()) {
-                            it.add(lineResult.displayText)
+                        if (lineResult.rawOutputLine.isNotEmpty()) {
+                            it.add(lineResult.rawOutputLine)
                         }
                     },
-                    iperf3Messages = lineResult.messages.toMutableList()
+                    resultNumber = lineResult.resultEntry,
+                    iperf3Messages = it.iperf3Messages.toMutableList(),
+                    lineResult =  lineResult
                 )
             }
+
         }
     }
 
@@ -193,9 +200,6 @@ class Iperf3RunViewModel @Inject constructor (
                 results =  it.results.also { it.clear() },
                 bandWidth = "",
                 latestLine = "",
-                minimum = "",
-                maximum = "",
-                average = "",
                 progress = 0f,
                 lastLine = "",
                 // Ensure the user can see selections during the run
@@ -205,6 +209,7 @@ class Iperf3RunViewModel @Inject constructor (
                 durationSecs = it.durationSecs.ifEmpty { DefaultUIValues.DURATION },
                 parallelStreams = it.parallelStreams.ifEmpty { DefaultUIValues.PARALLEL_STREAMS },
                 iperf3OutputMonitor = Iperf3OutputMonitor(),
+                resultNumber = -1,
             )
 
         }
@@ -249,15 +254,13 @@ class Iperf3RunViewModel @Inject constructor (
             _uiStateFlow.value.iperf3Parameters.durationSecs = myInt(uiStateFlow.value.durationSecs.ifEmpty { DefaultUIValues.DURATION })
             _uiStateFlow.value.iperf3Parameters.skip = myInt(_uiStateFlow.value.skip.ifEmpty { DefaultUIValues.SKIP })
 
-            // Temp: Setup output parsing (old Java code)
-            _uiStateFlow.value.iperf3OutputMonitor.reset()
-            _uiStateFlow.value.iperf3OutputMonitor.setParallel(_uiStateFlow.value.iperf3Parameters.parallelStreams)
+
             iperfManager = IperfTestManage(
                 updateProgress = ::updateProgress,                       // floating point track of progress
                 stdout = ::saveOutputLine,                               // output from iperf3
                 stderr = ::saveErrorLine,                                // errors from iperf3
                 iperf3Parameters = _uiStateFlow.value.iperf3Parameters,  // parameters for iperf3
-                onTestComplete = { completeTest() },
+                onTestComplete = { completeTest() }
             )
             updateProgress(0f)
             iperfManager?.startTest()
@@ -276,9 +279,9 @@ class Iperf3RunViewModel @Inject constructor (
         // Provide the return code to the UI.
         if (rc == 0) {
             // only update statistics on a successful run
-            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Average: ${_uiStateFlow.value.iperf3OutputMonitor.getAverage()}")})}
-            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Maximum: ${_uiStateFlow.value.iperf3OutputMonitor.getMaximum()}")})}
-            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Minimum: ${_uiStateFlow.value.iperf3OutputMonitor.getMinimum()}")})}
+            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Average: ${_uiStateFlow.value.lineResult.currentAvg}")})}
+            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Maximum: ${_uiStateFlow.value.lineResult.currentMax}")})}
+            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Minimum: ${_uiStateFlow.value.lineResult.currentMin}")})}
         }else {
             // Only need this on failure conditions
             _uiStateFlow.update {it.copy(results = it.results.also { it.add("Return Code: $rc") })}
