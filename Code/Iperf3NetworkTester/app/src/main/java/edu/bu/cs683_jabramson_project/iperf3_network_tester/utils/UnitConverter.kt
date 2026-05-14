@@ -1,5 +1,6 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.utils
 
+import android.annotation.SuppressLint
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Units.BITS
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Units.BITS_UNIT
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Units.GBITS
@@ -10,32 +11,34 @@ import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Units.MBITS
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Units.MB_UNIT
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Units.TBITS
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Units.TB_UNIT
+import java.util.Locale
 
 
 data class UnitConvertedData(val value: Double = 0.0, val unit: String = "") {
-    constructor(value: Double, unit: String, perSec: Boolean = false) : this(
-        if (perSec) value / BITS else value,
-        if (perSec) BITS_UNIT else unit
-    )
-    override fun toString(): String = if (value <= 0.0) "" else  "${value} ${unit}"
-
+    override fun toString(): String = if (value <= 0.0) "" else  "$value $unit"
 }
 
 object Units {
-    const val BITS = 1.0
     const val KBITS = 1024.0
     const val MBITS = 1024.0 * KBITS
     const val GBITS = 1024.0 * MBITS
     const val TBITS = 1024.0 * GBITS
+    const val BITS = 1.0
 
-    const val BITS_UNIT = "bits/sec"
     const val KB_UNIT = "Kbits/sec"
     const val MB_UNIT = "Mbits/sec"
     const val GB_UNIT = "Gbits/sec"
     const val TB_UNIT = "Tbits/sec"
+    const val BITS_UNIT = "bits/sec"
 }
 
 fun toString(unitConvertedData: UnitConvertedData) = "${unitConvertedData.value} ${unitConvertedData.unit}"
+
+
+fun toWholeNumber(unitConvertedData: UnitConvertedData): String {
+    val ret = "%5.2f %s".format(Locale.US, unitConvertedData.value, unitConvertedData.unit)
+    return ret
+}
 
 
 fun fromHumanUnit(value: Double, unit: String): Double {

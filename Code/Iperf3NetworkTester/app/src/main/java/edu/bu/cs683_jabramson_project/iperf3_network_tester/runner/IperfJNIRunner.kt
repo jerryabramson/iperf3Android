@@ -31,7 +31,6 @@ object IperfRunner {
     /**
      * Starts a coroutine timer to update elapsed time during the test.
      */
-
     fun startTimer(timerView: TextView) {
         stopTimer(timerView) // Stop any existing timer for this view
         startTimes[timerView] = System.currentTimeMillis()

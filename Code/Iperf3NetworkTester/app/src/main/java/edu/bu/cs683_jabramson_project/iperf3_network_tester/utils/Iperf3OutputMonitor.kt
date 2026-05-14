@@ -27,9 +27,11 @@ class Iperf3OutputMonitor {
         var currentAvg: UnitConvertedData = UnitConvertedData(),
 
         // raw output from iperf3
+        var rawBandWidth: String = "",
         var rawOutputLine: String = "",
         var connectedString: String = "",
         var timeout: String = "",
+        var rawAverage: String = "",
 
 
         // statistics - raw numeric values
@@ -46,6 +48,11 @@ class Iperf3OutputMonitor {
 
 
         var lastResult: String = "",
+
+        // -- getters for post-test summary (used after run completes) --
+
+
+
     )
 
     // -- accumulated state (private, no static fields) --
@@ -57,6 +64,7 @@ class Iperf3OutputMonitor {
     private var lastOmitted = false
     private var isSingleThread = true
     private var parallel = 1
+    private var historicalResults: MutableList<Double> = emptyList<Double>().toMutableList()
 
     /** Reset all accumulated state for a new test run. */
    fun reset() {
@@ -121,10 +129,7 @@ class Iperf3OutputMonitor {
                         }
                         if (sendOrReceive.isNotEmpty()) {
                             val lower = sendOrReceive.lowercase()
-                            if (!lower.contains("sender") && !lower.contains("receive") && !lower.contains(
-                                    "omit"
-                                )
-                            ) {
+                            if (!lower.contains("sender") && !lower.contains("receive") && !lower.contains("omit")) {
                                 sendOrReceive = ""
                             }
                         }
@@ -134,9 +139,12 @@ class Iperf3OutputMonitor {
                             val bitRateValue = bitRateString.toDoubleOrNull() ?: -1.0
                             currentLineResult.currentBandWidth = UnitConvertedData(bitRateValue, bitRateUnitString)
                             val currentBandWidthString = toString(currentLineResult.currentBandWidth)
+                            currentLineResult.rawBandWidth = "$bitRateString $bitRateUnitString"
                             if (sendOrReceive.isEmpty()) {
                                 updateMax(bitRateValue, bitRateUnitString)
                                 updateMin(bitRateValue, bitRateUnitString)
+                                historicalResults.add(fromHumanUnit(currentLineResult.currentBandWidth.value, currentLineResult.currentBandWidth.unit))
+                                updateRunningAverage(historicalResults)
                             }
                             val timeLabel: String
                             when (sendOrReceive.lowercase()) {
@@ -151,6 +159,8 @@ class Iperf3OutputMonitor {
                                         finished = true
                                         summaryResults = true
                                         currentLineResult.currentBandWidth = UnitConvertedData(bitRateValue, bitRateString)
+                                        currentLineResult.rawAverage = "$bitRateString $bitRateUnitString"
+                                        currentLineResult.currentAvg = UnitConvertedData(bitRateValue, bitRateUnitString)
                                     }
                                     timeLabel = String.format("%9.9s", sendOrReceive)
                                 }
@@ -158,19 +168,15 @@ class Iperf3OutputMonitor {
                                 else -> {
                                     currentLineResult.resultEntry++
                                     lastOmitted = false
-                                    timeLabel =
-                                        if (!isSingleThread) {
-                                            String.format("%d%8s", parallel, "streams")
-                                        } else {
-                                            String.format("%10.10s", "Running")
-                                        }
+                                    timeLabel = if (!isSingleThread) String.format("%d%8s", parallel, "streams") else String.format("%10.10s", "Running")
+
                                 }
                             }
                             currentLineResult.rawOutputLine =
-                                String.format("%s %-12.12s %s",
+                                String.format("%s %-12.12s%s %s",
                                     timeLabel,
                                     intervalString,
-                                    currentBandWidthString)
+                                    bitRateString, bitRateUnitString)
 
                         }
                     }
@@ -181,11 +187,6 @@ class Iperf3OutputMonitor {
         }
         return currentLineResult
     }
-
-    // -- getters for post-test summary (used after run completes) --
-    fun getMaximum(): String = if (currentLineResult.maxRawBitsPerSec > Double.MIN_VALUE) toString(currentLineResult.currentMax) else ""
-    fun getMinimum(): String = if (currentLineResult.minRawBitsPerSec < Double.MAX_VALUE) toString(currentLineResult.currentMin) else ""
-    fun getAverage(): String = if (currentLineResult.avgRawBitsPerSec >= 0) toString(currentLineResult.currentAvg) else ""
 
 
     // -- private helpers --
@@ -205,4 +206,15 @@ class Iperf3OutputMonitor {
         }
     }
 
+    private fun updateRunningAverage(historicalResults: List<Double>) {
+        var sum = 0.0
+        for (i in historicalResults.indices) {
+            sum += historicalResults[i]
+        }
+        currentLineResult.currentAvg = toHumanUnit(sum / historicalResults.size)
+    }
+
 }
+fun getMaximum(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.maxRawBitsPerSec > Double.MIN_VALUE) toWholeNumber(lineResult.currentMax) else ""
+fun getMinimum(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.minRawBitsPerSec < Double.MAX_VALUE) toWholeNumber(lineResult.currentMin) else ""
+fun getAverage(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.avgRawBitsPerSec >= 0) toWholeNumber(lineResult.currentAvg) else ""

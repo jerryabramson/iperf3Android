@@ -10,6 +10,9 @@ import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Paramete
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3ResultsData
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.runner.IperfTestManage
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Iperf3OutputMonitor
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getAverage
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getMaximum
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getMinimum
 
 
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -143,7 +146,7 @@ class Iperf3RunViewModel @Inject constructor (
             _uiStateFlow.update {
                 it.copy(
                     lastLine = it.latestLine,
-                    bandWidth = lineResult.currentBandWidth.toString(),
+                    bandWidth = lineResult.rawBandWidth,
                     latestLine = lineResult.rawOutputLine,
                     outputLines = it.outputLines.also {
                         if (lineResult.rawOutputLine.isNotEmpty()) {
@@ -210,6 +213,7 @@ class Iperf3RunViewModel @Inject constructor (
                 parallelStreams = it.parallelStreams.ifEmpty { DefaultUIValues.PARALLEL_STREAMS },
                 iperf3OutputMonitor = Iperf3OutputMonitor(),
                 resultNumber = -1,
+                returnCode =  0
             )
 
         }
@@ -241,7 +245,7 @@ class Iperf3RunViewModel @Inject constructor (
      * @return The return code from the iperf3 binary.
      */
     suspend fun runIperf3(): Int {
-        var rc: Int = 0
+        var rc: Int? = 0
         try {
             // Prepare the UI state for the test.
 
@@ -263,8 +267,20 @@ class Iperf3RunViewModel @Inject constructor (
                 onTestComplete = { completeTest() }
             )
             updateProgress(0f)
-            iperfManager?.startTest()
+            rc = iperfManager?.startTest()
+            if (rc == null) {
+                Log.e(tag, "Failed to run iperf3: rc is null")
+                saveErrorLine("Failed to run iperf3: rc is null")
+                rc = -1
+            }
 
+            Log.d(tag, "runIperf3 Completed, return code: $rc")
+            _uiStateFlow.update {
+                it.copy(
+                    iperf3OutputMonitor = Iperf3OutputMonitor(),
+                    resultNumber = -1,
+                )
+            }
 
         } catch (e: Exception) {
             /* Shouldn't ever get here, since guards are already in place */
@@ -279,9 +295,12 @@ class Iperf3RunViewModel @Inject constructor (
         // Provide the return code to the UI.
         if (rc == 0) {
             // only update statistics on a successful run
-            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Average: ${_uiStateFlow.value.lineResult.currentAvg}")})}
-            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Maximum: ${_uiStateFlow.value.lineResult.currentMax}")})}
-            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Minimum: ${_uiStateFlow.value.lineResult.currentMin}")})}
+            var max = getMaximum(_uiStateFlow.value.lineResult)
+            var min = getMinimum(_uiStateFlow.value.lineResult)
+            var avg = getAverage(_uiStateFlow.value.lineResult)
+            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Average: $avg")})}
+            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Maximum: $max")})}
+            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Minimum: $min")})}
         }else {
             // Only need this on failure conditions
             _uiStateFlow.update {it.copy(results = it.results.also { it.add("Return Code: $rc") })}

@@ -40,6 +40,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme.mesloFontFamily
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getAverage
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getMaximum
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getMinimum
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.toWholeNumber
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.DefaultUIValues
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.Iperf3RunViewModel
 
@@ -296,18 +300,17 @@ private fun ResultsRow(
 ) {
     Column(
         horizontalAlignment = Alignment.Start,
-        modifier = Modifier.padding(start = 10.dp).fillMaxWidth()
+        modifier = Modifier.padding(start = 10.dp, end =  10.dp).fillMaxWidth()
     ) {
         if (uiState.isRunning || !uiState.isFinished) return
         if (uiState.results.isEmpty()) return
-
-        val resultColor =
-            if (uiState.returnCode != 0) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary
+        var thick  = if (uiState.returnCode != 0) 5.dp else 2.dp
+        val resultColor = if (uiState.returnCode != 0) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary
 
         Spacer(modifier = Modifier.height(4.dp))
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
-            thickness = 2.dp,
+            thickness = thick,
             color = MaterialTheme.colorScheme.tertiary
         )
         LazyColumn(modifier = Modifier.fillMaxWidth()) {
@@ -388,7 +391,7 @@ private fun BandwidthDisplay(uiState: edu.bu.cs683_jabramson_project.iperf3_netw
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-        text = uiState.bandWidth,
+        text = uiState.lineResult.rawBandWidth,
         color = MaterialTheme.colorScheme.primary,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth(),
@@ -396,24 +399,31 @@ private fun BandwidthDisplay(uiState: edu.bu.cs683_jabramson_project.iperf3_netw
         )
 
         HorizontalDivider(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
             thickness = 2.dp,
             color = MaterialTheme.colorScheme.primary
         )
-
+        var max = uiState.lineResult.currentMax
+        var min = uiState.lineResult.currentMin
+        var avg = uiState.lineResult.currentAvg
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = uiState.lineResult.currentMin.toString(),
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.titleMedium
+                text = toWholeNumber(min),
+                color = MaterialTheme.colorScheme.tertiary,
+                style = MaterialTheme.typography.titleSmall
             )
             Text(
-                text = uiState.lineResult.currentMax.toString(),
-                color = MaterialTheme.colorScheme.tertiary,
-                style = MaterialTheme.typography.titleMedium
+                text = toWholeNumber(avg),
+                //color = MaterialTheme.colorScheme.surfaceVariant,
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                text = toWholeNumber(max),
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.titleSmall
             )
         }
     }
@@ -426,15 +436,23 @@ private fun ErrorSection(
     monoStyle: TextStyle
 ) {
     if (uiState.errorLines.isEmpty()) return
-
-    Spacer(modifier = Modifier.height(24.dp))
-    HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 4.dp, color = MaterialTheme.colorScheme.error)
-    LazyColumn(modifier = Modifier.fillMaxWidth()) {
-        items(uiState.errorLines.size) { index ->
-            ErrorLineItem(uiState.errorLines[index], monoStyle)
+    Column(
+        horizontalAlignment = Alignment.Start,
+        modifier = Modifier.padding(start = 10.dp, end =  10.dp).fillMaxWidth()
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
+            thickness = 4.dp,
+            color = MaterialTheme.colorScheme.error
+        )
+        LazyColumn(modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp)) {
+            items(uiState.errorLines.size) { index ->
+                ErrorLineItem(uiState.errorLines[index], monoStyle)
+            }
         }
+        Spacer(modifier = Modifier.height(24.dp))
     }
-    Spacer(modifier = Modifier.height(24.dp))
 }
 
 @Composable
@@ -457,34 +475,26 @@ private fun IperfMessagesSection(
 ) {
     Column() {
 
-        if (uiState.isVerbose || uiState.isDebugging ||
+        if (uiState.isVerbose || uiState.isDebugging || uiState.returnCode != 0 ||
             (uiState.latestLine.isEmpty() && !uiState.isFinished)) {
             Spacer(modifier = Modifier.height(1.dp))
-            HorizontalDivider(
-                modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
-                thickness = 4.dp,
-                color = MaterialTheme.colorScheme.tertiary
-            )
+            if (uiState.returnCode == 0) {
+                HorizontalDivider(
+                    modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
+                    thickness = 4.dp,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+            }
 
-
-                LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                    items(uiState.iperf3Messages.size) { index ->
-                        IperfMessageItem(uiState.iperf3Messages[index], monoStyle)
-                    }
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                items(uiState.iperf3Messages.size) { index ->
+                    IperfMessageItem(uiState.iperf3Messages[index], monoStyle)
                 }
-
-
-
-
+            }
 
             if (uiState.isRunning && !uiState.isFinished && uiState.latestLine.isEmpty()) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
                 Spacer(modifier = Modifier.height(4.dp))
-//                HorizontalDivider(
-//                    modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
-//                    thickness = 4.dp,
-//                    color = MaterialTheme.colorScheme.tertiary
-//                )
             }
         }
     }

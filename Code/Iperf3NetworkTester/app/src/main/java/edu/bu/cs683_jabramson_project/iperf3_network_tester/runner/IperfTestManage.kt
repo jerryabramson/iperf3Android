@@ -39,7 +39,7 @@ class IperfTestManage(
      */
     suspend fun startTest(): Int {
         Log.d(tag, "iperf3 JNI Bridge")
-
+        var rc = 0
         updateProgress(0.0f)
         if (iperf3Parameters.durationSecs <= 0) {
             Log.e("Iperf3Runner", "Invalid duration: ${iperf3Parameters.durationSecs}")
@@ -81,6 +81,7 @@ class IperfTestManage(
         val handler = CoroutineExceptionHandler { _, exception ->
             stderr("🚨 Uncaught Exception: ${exception.localizedMessage}")
             exception.printStackTrace()
+            rc = -1
         }
 
 
@@ -135,6 +136,7 @@ class IperfTestManage(
                             onTestComplete()
                             //testCompleted.complete(Unit)
                             updateProgress(1.0f)
+                            rc = -1
                         },
                     onComplete = {
                         isIperfRunning = false
@@ -148,7 +150,7 @@ class IperfTestManage(
         }
         runJob.join()
         runJob.cancel()
-        return -1//@withContext -1
+        return rc //@withContext -1
     }
 }
 
