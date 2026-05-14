@@ -200,8 +200,8 @@ class Iperf3OutputMonitor {
 
     private fun updateMin(value: Double, unit: String) {
         val rawValue = fromHumanUnit(value, unit)
-        if (value < currentLineResult.minRawBitsPerSec) {
-            currentLineResult.minRawBitsPerSec = value
+        if (rawValue < currentLineResult.minRawBitsPerSec) {
+            currentLineResult.minRawBitsPerSec = rawValue
             currentLineResult.currentMin = toHumanUnit(rawValue)
         }
     }
