@@ -3056,6 +3056,8 @@ iperf_new_test()
     /* By default all output goes to stdout */
     test->outfile = stdout;
 
+    *(test->tempDir) = '\0';
+
     return test;
 }
 
@@ -4603,19 +4605,22 @@ iperf_new_stream(struct iperf_test *test, int s, int sender)
         snprintf(template, sizeof(template) / sizeof(char), "%s", test->tmp_template);
     } else {
         //find the system temporary dir *unix, windows, cygwin support
-        char* tempdir = getenv("TMPDIR");
-        if (tempdir == 0){
-            tempdir = getenv("TEMP");
-        }
-        if (tempdir == 0){
-            tempdir = getenv("TMP");
-        }
-        if (tempdir == 0){
+        char *tempdir = test->tempDir;
+        if (tempdir == 0) {
+            tempdir = getenv("TMPDIR");
+            if (tempdir == 0) {
+                tempdir = getenv("TEMP");
+            }
+            if (tempdir == 0) {
+                tempdir = getenv("TMP");
+            }
+            if (tempdir == 0) {
 #if defined(__ANDROID__)
-            tempdir = "/data/local/tmp";
+                tempdir = "/data/local/tmp";
 #else
-            tempdir = "/tmp";
+                tempdir = "/tmp";
 #endif
+            }
         }
         snprintf(template, sizeof(template) / sizeof(char), "%s/iperf3.XXXXXX", tempdir);
     }

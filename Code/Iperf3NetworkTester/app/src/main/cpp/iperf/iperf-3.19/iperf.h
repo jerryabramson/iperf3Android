@@ -436,6 +436,8 @@ struct iperf_test {
     /* Server output (use on server side only) */
     TAILQ_HEAD(iperf_textlisthead, iperf_textline) server_output_list;
 
+    char tempDir[PATH_MAX];
+
 };
 
 /* default settings */

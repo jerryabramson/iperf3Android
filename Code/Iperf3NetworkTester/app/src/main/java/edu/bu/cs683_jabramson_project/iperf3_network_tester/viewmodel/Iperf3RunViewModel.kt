@@ -1,6 +1,7 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel
 
 import android.R.attr.tag
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -66,6 +67,7 @@ data class UiData(
     val resultNumber: Long = -1,
     val numberOfMessages: Int = 0,
     val lineResult: Iperf3OutputMonitor.LineResult = Iperf3OutputMonitor.LineResult(),
+    val context: Context? = null,
     )
 
 /**
@@ -119,6 +121,7 @@ class Iperf3RunViewModel @Inject constructor (
                 resultNumber = -1,
                 numberOfMessages = 0,
                 lineResult = Iperf3OutputMonitor.LineResult(),
+                context = savedStateHandle.get<Context>("context")
             )
         }
     }
@@ -260,6 +263,7 @@ class Iperf3RunViewModel @Inject constructor (
 
 
             iperfManager = IperfTestManage(
+                context = _uiStateFlow.value.context,                    // local context
                 updateProgress = ::updateProgress,                       // floating point track of progress
                 stdout = ::saveOutputLine,                               // output from iperf3
                 stderr = ::saveErrorLine,                                // errors from iperf3
@@ -481,6 +485,11 @@ class Iperf3RunViewModel @Inject constructor (
     }
 
 
+    fun setContext(context: Context) {
+        _uiStateFlow.update {
+            it.copy(context = context)
+        }
+    }
     /**
      * User entered a new trace level.
      * @param traceLevel The new value for trace level.

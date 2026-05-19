@@ -21,6 +21,9 @@ object IperfRunner {
 
     // endregion
 
+    @JvmStatic
+    external fun setTempDir(tempDir: String)
+
     //@JvmStatic
     //external fun runIperf(arguments: Array<String>, callback: IperfCallback)
     @JvmStatic

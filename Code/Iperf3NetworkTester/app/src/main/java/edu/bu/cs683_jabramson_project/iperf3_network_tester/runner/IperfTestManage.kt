@@ -2,6 +2,7 @@ package edu.bu.cs683_jabramson_project.iperf3_network_tester.runner
 
 
 import android.R.attr.tag
+import android.content.Context
 import android.util.Log
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Iperf3OutputMonitor
@@ -17,8 +18,8 @@ import kotlinx.coroutines.launch
  * Supports advanced features like smart ramp-up, hybrid tests, and automatic bandwidth reduction.
  */
 class IperfTestManage(
+    val context: Context?,
     val tag: String = "IperfTestManage",
-    //private val context: Context,
     var updateProgress: (Float) -> Unit,
     var stdout: (Iperf3OutputMonitor.LineResult, Boolean) -> Unit,
     var stderr: (String) -> Unit,
@@ -48,6 +49,9 @@ class IperfTestManage(
             return -1 // @withContext -1
         }
         //val command = iperf3Parameters.iperf3Binary.absolutePath
+
+
+        Log.d(tag, "tempDirectory: tempDirectory")
         var flush = ""
         var reverse = ""
         val serverPort = iperf3Parameters.serverPort
@@ -72,7 +76,8 @@ class IperfTestManage(
             "--connect-timeout",
             localTimeout.toString(),
             "--time", iperf3Parameters.durationSecs.toString(),
-            "--omit", iperf3Parameters.skip.toString()
+            "--omit", iperf3Parameters.skip.toString(),
+            //"-V"
         )
 
 
@@ -84,6 +89,8 @@ class IperfTestManage(
             rc = -1
         }
 
+        val tempDirectory: String = if (context != null) context.cacheDir.toString() else ""
+        IperfRunner.setTempDir(tempDirectory)
 
         //val iperfJob = CoroutineScope(Dispatchers.IO + handler).launch {
             //val testCompleted = CompletableDeferred<Unit>()

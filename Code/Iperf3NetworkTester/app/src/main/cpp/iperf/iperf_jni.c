@@ -23,6 +23,35 @@ static struct iperf_test *global_test = NULL;
 static pthread_t reader_thread;
 static volatile bool stop_requested = false;
 
+static char g_temp_dir[PATH_MAX]; // Global or pass via struct/context
+
+JNIEXPORT void JNICALL
+Java_edu_bu_cs683_1jabramson_1project_iperf3_1network_1tester_runner_IperfRunner_setTempDir(
+        JNIEnv *env, jclass clazz, jstring temp_dir)
+{
+    const char *c_path = (*env)->GetStringUTFChars(env, temp_dir, NULL);
+    if ((c_path == NULL) || strlen(c_path) == 0) {
+        c_path = getenv("TMPDIR");
+        if (c_path == 0) {
+            c_path = getenv("TEMP");
+        }
+        if (c_path == 0) {
+            c_path = getenv("TMP");
+        }
+        if (c_path == 0) {
+#if defined(__ANDROID__)
+            c_path = "/data/local/tmp";
+#else
+            c_path  = "/tmp";
+#endif
+        }
+    }
+    strncpy(g_temp_dir, c_path, PATH_MAX - 1);
+    g_temp_dir[PATH_MAX - 1] = '\0';
+    (*env)->ReleaseStringUTFChars(env, temp_dir, c_path);
+}
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Structs
 // ─────────────────────────────────────────────────────────────────────────────
@@ -101,9 +130,12 @@ void *readerThreadFunc(void *args_ptr) {
  * Sends output and status updates via the provided callback.
  */
 JNIEXPORT void JNICALL
-Java_edu_bu_cs683_1jabramson_1project_iperf3_1network_1tester_runner_IperfRunner_runIperfLive(JNIEnv *env, jobject thiz,
-                                                                                              jobjectArray arguments,
-                                                                                              jobject callback) {
+Java_edu_bu_cs683_1jabramson_1project_iperf3_1network_1tester_runner_IperfRunner_runIperfLive(
+        JNIEnv *env,
+        jobject thiz,
+        jobjectArray arguments,
+        jobject callback)
+{
 
     jclass callbackClass = (*env)->GetObjectClass(env, callback);
     jmethodID onOutput = (*env)->GetMethodID(env, callbackClass, "onOutput",
@@ -160,6 +192,8 @@ Java_edu_bu_cs683_1jabramson_1project_iperf3_1network_1tester_runner_IperfRunner
         iperf_free_test(global_test);
         return;
     }
+    strncpy(global_test->tempDir, g_temp_dir, PATH_MAX - 1);
+    global_test->tempDir[PATH_MAX - 1] = '\0';
 
     // ───── Start reader thread ─────
     struct CallbackArgs *cb_args = malloc(sizeof(struct CallbackArgs));
@@ -217,3 +251,4 @@ Java_edu_bu_cs683_1jabramson_1project_iperf3_1network_1tester_runner_IperfRunner
     // ───── Notify completion to Java ─────
     (*env)->CallVoidMethod(env, callback, onComplete);
 }
+

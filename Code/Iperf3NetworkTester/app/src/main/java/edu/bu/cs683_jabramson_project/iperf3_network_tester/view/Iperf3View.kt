@@ -33,6 +33,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -53,7 +54,8 @@ fun RunIperf3Screen(viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewM
     val uiState by viewModel.uiStateFlow.collectAsState()
     val monoStyle = mesloMonoTextStyle()
     val fieldColors = textFieldColors()
-
+    val context = LocalContext.current
+    viewModel.setContext(context)
     Scaffold(
         topBar = {
             TopAppBar(
