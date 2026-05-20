@@ -3,6 +3,7 @@ package edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel
 import android.R.attr.tag
 import android.content.Context
 import android.util.Log
+import android.util.Log.e
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -178,6 +179,10 @@ class Iperf3RunViewModel @Inject constructor (
         }
     }
 
+    fun launchOrCancel() {
+        if (!_uiStateFlow.value.isRunning) launch() else cancel()
+    }
+
     /**
      * Launch the iperf3 binary (notice that this is an asynchronous operation).
      */
@@ -242,6 +247,47 @@ class Iperf3RunViewModel @Inject constructor (
     private fun myInt(s: String): Int = try { s.toInt() } catch (ex: Exception) { 0 }
 
 
+    fun cancel() {
+        Log.d(tag, "Async cancel Started")
+        // Update the UI active running state with empty values for the start of the test.
+        _uiStateFlow.update {
+            it.copy(
+                returnCode = -1,
+                isRunning = false,
+                isFinished = true,
+                // Only remember last choices for non-default user selections
+                hostName =  if (it.hostName != DefaultUIValues.HOST_NAME) it.hostName else "",
+                skip =  if (it.skip != DefaultUIValues.SKIP) it.skip else "",
+                durationSecs = if (it.durationSecs != DefaultUIValues.DURATION) it.durationSecs else "",
+                parallelStreams = if (it.parallelStreams != DefaultUIValues.PARALLEL_STREAMS) it.parallelStreams else ""
+            )
+        }
+        viewModelScope.launch {cancelTest() }
+        Log.d(tag, "Async finished Completed")
+    }
+
+    suspend fun cancelTest(): Int? {
+        var rc: Int? = 0
+        try {
+            iperfManager = IperfTestManage(
+                context = _uiStateFlow.value.context,                    // local context
+                updateProgress = ::updateProgress,                       // floating point track of progress
+                stdout = ::saveOutputLine,                               // output from iperf3
+                stderr = ::saveErrorLine,                                // errors from iperf3
+                iperf3Parameters = _uiStateFlow.value.iperf3Parameters,  // parameters for iperf3
+                onTestComplete = { completeTest() } )
+            rc = iperfManager?.cancelTest()
+        } catch (e: Exception) {
+            /* Shouldn't ever get here, since guards are already in place */
+            Log.e(tag, "Failed to cancel iperf3: ${e.message}", e)
+            saveErrorLine("Failed to cancel iperf3: ${e.message}")
+            rc = -1
+        }
+        _uiStateFlow.update {it.copy(results = it.results.also { it.add("Test Cancelled!") })}
+
+        return rc
+    }
+
     /**
      * Run the iperf3 binary.
      * This must be a suspend function called from a coroutine.
@@ -299,15 +345,23 @@ class Iperf3RunViewModel @Inject constructor (
         // Provide the return code to the UI.
         if (rc == 0) {
             // only update statistics on a successful run
-            var max = getMaximum(_uiStateFlow.value.lineResult)
-            var min = getMinimum(_uiStateFlow.value.lineResult)
-            var avg = getAverage(_uiStateFlow.value.lineResult)
-            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Average: $avg")})}
-            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Maximum: $max")})}
-            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Minimum: $min")})}
-        }else {
-            // Only need this on failure conditions
-            _uiStateFlow.update {it.copy(results = it.results.also { it.add("Return Code: $rc") })}
+            var outputCount = _uiStateFlow.value.lineResult.resultEntry
+            if (outputCount > 0 ) {
+                var max = getMaximum(_uiStateFlow.value.lineResult)
+                var min = getMinimum(_uiStateFlow.value.lineResult)
+                var avg = getAverage(_uiStateFlow.value.lineResult)
+                _uiStateFlow.update { it.copy(results = it.results.also { it.add("Average: $avg") }) }
+                _uiStateFlow.update { it.copy(results = it.results.also { it.add("Maximum: $max") }) }
+                _uiStateFlow.update { it.copy(results = it.results.also { it.add("Minimum: $min") }) }
+            } else {
+                _uiStateFlow.update { it.copy(results = it.results.also { it.add("No Results") }) }
+            }
+        } else {
+            var outputCount = _uiStateFlow.value.lineResult.resultEntry
+            if (outputCount > 0 ) {
+                // Only need this on failure conditions
+                _uiStateFlow.update { it.copy(results = it.results.also { it.add("Error.") }) }
+            }
         }
 
         // Provide the return code to the UI.

@@ -35,6 +35,38 @@ class IperfTestManage(
 
     // region Public Lifecycle
 
+    suspend fun cancelTest(): Int {
+        var rc = 0
+        IperfRunner.forceStop(
+            createIperfCallback(
+                onLine =
+                    {
+                        val line = it.trim().removeSuffix("\n")
+                        var output = iperf3OutputMonitor.processCancelLine(line)
+                        stdout(output, true)
+                        Log.d(tag, "forceStop: onLine: $line")
+                    }, onError =
+                    {
+                        val err = it.trim().removeSuffix("\n")
+                        isIperfRunning = false
+                        stderr("\n❌ Error: $err")
+                        onTestComplete()
+                        //testCompleted.complete(Unit)
+                        updateProgress(1.0f)
+                        rc = -1
+                    },
+                onComplete = {
+                    isIperfRunning = false
+                    onTestComplete()
+                    updateProgress(1.0f)
+                    //testCompleted.complete(Unit)
+                }
+            )
+        )
+        return rc
+
+
+    }
     /**
      * Starts the test with the provided arguments and configuration.
      */
@@ -116,6 +148,7 @@ class IperfTestManage(
                             if (output.resultEntry > intervalCount && !started) {
                                 started = true
                                 intervalCount = output.resultEntry
+                                stdout(output, false)
                             }
                             if (output.resultEntry > intervalCount || output.messages.size > numberOfMessages) {
                                 if (started && output.resultEntry > intervalCount) {
@@ -160,6 +193,7 @@ class IperfTestManage(
         return rc //@withContext -1
     }
 }
+
 
 
 private fun createIperfCallback(

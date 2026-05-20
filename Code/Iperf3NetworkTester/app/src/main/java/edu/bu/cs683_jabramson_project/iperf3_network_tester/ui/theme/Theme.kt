@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 
 import androidx.compose.ui.platform.LocalContext
@@ -28,11 +29,11 @@ val DarkColorScheme = darkColorScheme(
     primary = Purple40,
     secondary = PurpleGrey40,
     tertiary = Pink40,
-    onError = Red40
+    onError = Red40,
 
-    /* Other default colors to override
+    /* Other default colors to override */
     background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+    /*surface = Color(0xFFFFFBFE),
     onPrimary = Color.White,
     onSecondary = Color.White,
     onTertiary = Color.White,
@@ -62,8 +63,8 @@ fun Iperf3NetworkTesterTheme(
     val view = LocalView.current
     SideEffect {
         val window = (view.context as Activity).window
-        window.statusBarColor = colorScheme.primary.toArgb()
-        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+        //window.statusBarColor = colorScheme.primary
+        //WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
     }
     MaterialTheme(
         colorScheme = colorScheme,

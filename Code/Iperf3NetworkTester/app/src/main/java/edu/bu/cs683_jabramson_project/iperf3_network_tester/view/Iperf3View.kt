@@ -1,20 +1,30 @@
 // app/src/main/java/edu/bu/cs683_jabramson_project/iperf3_network_tester/ui/Iperf3View.kt
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.view
 
+import android.R.attr.end
+import android.R.attr.onClick
 import android.R.attr.thickness
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.AlertDialogDefaults.containerColor
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -28,17 +38,20 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme.mesloFontFamily
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getAverage
@@ -47,6 +60,7 @@ import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getMinimum
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.toWholeNumber
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.DefaultUIValues
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.Iperf3RunViewModel
+import org.w3c.dom.Text
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,23 +70,44 @@ fun RunIperf3Screen(viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewM
     val fieldColors = textFieldColors()
     val context = LocalContext.current
     viewModel.setContext(context)
+
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end=50.dp).width(280.dp).height(40.dp).background(color = MaterialTheme.colorScheme.tertiaryContainer)
+                        //verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(end=20.dp).background(color = MaterialTheme.colorScheme.outlineVariant)
                     )
                     {
-                        Text(stringResource(id = R.string.app_name), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 6.dp))
+                        Text(stringResource(id = R.string.app_name),
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(start =10.dp,top = 5.dp,bottom = 5.dp))
                     }
                 },
-                actions = { RunButton(viewModel, uiState.isRunning, uiState.isFinished) },
+                actions = { RunButton(uiState, viewModel, isRunning = uiState.isRunning, uiState.isFinished) },
+
 
             )
         },
-        bottomBar = { BottomBar() }
+        bottomBar = {
+            BottomAppBar() {
+//                BottomBar()
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                )
+                {
+                    Text(text =  "Mobile Development Directed Study - Jerold Abramson",
+                        style = mesloMonoTextStyle(),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.padding(start =  15.dp)
+
+                    )
+                }
+            }
+        }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
 
@@ -89,7 +124,6 @@ fun RunIperf3Screen(viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewM
             DebugOutputSection(uiState, monoStyle)
 
 
-
         }
     }
 }
@@ -101,15 +135,27 @@ fun RunIperf3Screen(viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewM
  * @param isRunning whether the UI is currently running
   */
 @Composable
-private fun RunButton(viewModel: Iperf3RunViewModel,
-                      isRunning: Boolean = false,
+private fun RunButton(uiState: edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData,
+                      viewModel: Iperf3RunViewModel,
+                      isRunning: Boolean,
                       isFinished: Boolean = false) {
+    var buttonColor = MaterialTheme.colorScheme.primary
+    if (isRunning) buttonColor = MaterialTheme.colorScheme.errorContainer
     androidx.compose.material3.Button(
         modifier = Modifier.padding(end = 10.dp),
         shape = MaterialTheme.shapes.large,
-        onClick = viewModel::launch,
-        enabled = !isRunning || isFinished
-    ) { Text("Run") }
+        onClick =  viewModel::launchOrCancel,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = buttonColor
+        )
+        //enabled = !isRunning || isFinished
+    ) {
+        if (!isRunning) {
+            Text(text = "Run", color = MaterialTheme.colorScheme.surfaceVariant)
+        } else {
+            Text(text = "Cancel", color = MaterialTheme.colorScheme.error)
+        }
+    }
 }
 
 
@@ -118,10 +164,13 @@ private fun RunButton(viewModel: Iperf3RunViewModel,
  */
 @Composable
 private fun BottomBar() {
-    Text(
-        text = "Mobile Development Directed Study Application - Jerold Abramson",
-        fontSize = 10.sp
-    )
+    Row(verticalAlignment = Alignment.Bottom,
+        modifier = Modifier.padding(start = 10.dp).fillMaxWidth()) {
+        Text(
+            text = "Mobile Development Directed Study Application - Jerold Abramson",
+            fontSize = 10.sp
+        )
+    }
 }
 
 @Composable
@@ -307,7 +356,7 @@ private fun ResultsRow(
         if (uiState.isRunning || !uiState.isFinished) return
         if (uiState.results.isEmpty()) return
         var thick  = if (uiState.returnCode != 0) 5.dp else 2.dp
-        val resultColor = if (uiState.returnCode != 0) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary
+        val resultColor = if (uiState.returnCode != 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
 
         Spacer(modifier = Modifier.height(4.dp))
         HorizontalDivider(

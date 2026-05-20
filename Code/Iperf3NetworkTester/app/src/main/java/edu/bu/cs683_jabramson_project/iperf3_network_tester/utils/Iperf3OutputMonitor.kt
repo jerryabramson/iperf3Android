@@ -84,6 +84,10 @@ class Iperf3OutputMonitor {
         this.isSingleThread = parallel == 1
     }
 
+    fun processCancelLine(line: String): LineResult {
+        currentLineResult.messages.add(line)
+        return currentLineResult
+    }
     /** Parse one iperf3 output line and return all extracted data at once. */
     @SuppressLint("DefaultLocale")
     fun processLine(line: String): LineResult {
@@ -139,6 +143,12 @@ class Iperf3OutputMonitor {
                             val bitRateValue = bitRateString.toDoubleOrNull() ?: -1.0
                             currentLineResult.currentBandWidth = UnitConvertedData(bitRateValue, bitRateUnitString)
                             val currentBandWidthString = toString(currentLineResult.currentBandWidth)
+                            val intervalParts = intervalString.split("-")
+                            var intervalLong = currentLineResult.resultEntry
+                            if (intervalParts.size == 2) {
+                                val intervalDouble = intervalParts[0].toDoubleOrNull() ?: 0.0
+                                intervalLong = intervalDouble.toLong()
+                            }
                             currentLineResult.rawBandWidth = "$bitRateString $bitRateUnitString"
                             if (sendOrReceive.isEmpty()) {
                                 updateMax(bitRateValue, bitRateUnitString)
@@ -149,11 +159,13 @@ class Iperf3OutputMonitor {
                             val timeLabel: String
                             when (sendOrReceive.lowercase()) {
                                 "(omitted)" -> {
+                                    intervalLong = currentLineResult.resultEntry + 1
                                     lastOmitted = true
                                     timeLabel = "skipped  "
                                 }
 
                                 "sender", "receiver" -> {
+                                    intervalLong = currentLineResult.resultEntry + 1
                                     lastOmitted = false
                                     if (!finished) {
                                         finished = true
@@ -166,12 +178,12 @@ class Iperf3OutputMonitor {
                                 }
 
                                 else -> {
-                                    currentLineResult.resultEntry++
                                     lastOmitted = false
                                     timeLabel = if (!isSingleThread) String.format("%d%8s", parallel, "streams") else String.format("%10.10s", "Running")
 
                                 }
                             }
+                            currentLineResult.resultEntry = intervalLong
                             currentLineResult.rawOutputLine =
                                 String.format("%s %-12.12s%s %s",
                                     timeLabel,

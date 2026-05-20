@@ -101,26 +101,28 @@ void *readerThreadFunc(void *args_ptr) {
 /**
  * Gracefully requests iperf to stop, used by the stop button in the UI.
  */
-//JNIEXPORT void JNICALL
-//Java_edu_bu_cs683_jabramson_project_iperf3_network_tester_runner_forceStop(JNIEnv *env, jobject thiz,
-//                                                                         jobject callback) {
-//    stop_requested = true;
-//
-//    jclass callbackClass = (*env)->GetObjectClass(env, callback);
-//    jmethodID onOutput = (*env)->GetMethodID(env, callbackClass, "onOutput",
-//                                             "(Ljava/lang/String;)V");
-//
-//    jstring statusMsg = (*env)->NewStringUTF(env,
-//                                             "[iPerf JNI] Requested graceful stop of iPerf test.");
-//    (*env)->CallVoidMethod(env, callback, onOutput, statusMsg);
-//    (*env)->DeleteLocalRef(env, statusMsg);
-//
-//    if (global_test && !global_test->done) {
-//        global_test->done = 1;
-//        iperf_set_send_state(global_test, IPERF_DONE);
-//        shutdown(global_test->ctrl_sck, SHUT_RDWR);  // Unblocks select()
-//    }
-//}
+JNIEXPORT void JNICALL
+Java_edu_bu_cs683_1jabramson_1project_iperf3_1network_1tester_runner_IperfRunner_forceStop(JNIEnv *env,
+                                                                                           jobject thiz,
+                                                                                           jobject callback)
+{
+    stop_requested = true;
+
+    jclass callbackClass = (*env)->GetObjectClass(env, callback);
+    jmethodID onOutput = (*env)->GetMethodID(env, callbackClass, "onOutput",
+                                             "(Ljava/lang/String;)V");
+
+    jstring statusMsg = (*env)->NewStringUTF(env,
+                                             "[iPerf JNI] Requested graceful stop of iPerf test.");
+    (*env)->CallVoidMethod(env, callback, onOutput, statusMsg);
+    (*env)->DeleteLocalRef(env, statusMsg);
+
+    if (global_test && !global_test->done) {
+        global_test->done = 1;
+        iperf_set_send_state(global_test, IPERF_DONE);
+        shutdown(global_test->ctrl_sck, SHUT_RDWR);  // Unblocks select()
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main iperf run method (JNI call from Java)
