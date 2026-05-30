@@ -1,5 +1,7 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme
 
+import android.R.color.white
+import android.R.id.primary
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -11,6 +13,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color.Companion.Red
 import androidx.compose.ui.graphics.toArgb
 
 import androidx.compose.ui.platform.LocalContext
@@ -22,17 +25,22 @@ val DarkColorScheme = darkColorScheme(
     primary = Purple80,
     secondary = PurpleGrey80,
     tertiary = Pink80,
-    onError = Red80
+    onError = Red40,
+    background = White,
+    onErrorContainer = BrightRed,
+    surfaceDim = Grey90
 )
 
  val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40,
-    onError = Red40,
+     primary = Purple40,
+     secondary = PurpleGrey40,
+     tertiary = Pink40,
+     onError = Purple40,
+     background = Black,
+     onErrorContainer = Red90,
+     surfaceDim =  Grey80
 
     /* Other default colors to override */
-    background = Color(0xFFFFFBFE),
     /*surface = Color(0xFFFFFBFE),
     onPrimary = Color.White,
     onSecondary = Color.White,

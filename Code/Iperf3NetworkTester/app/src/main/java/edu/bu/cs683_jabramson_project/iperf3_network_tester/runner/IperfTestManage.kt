@@ -4,6 +4,7 @@ package edu.bu.cs683_jabramson_project.iperf3_network_tester.runner
 import android.R.attr.tag
 import android.content.Context
 import android.util.Log
+import androidx.room.util.newStringBuilder
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Iperf3OutputMonitor
 
@@ -18,38 +19,48 @@ import kotlinx.coroutines.launch
  * Supports advanced features like smart ramp-up, hybrid tests, and automatic bandwidth reduction.
  */
 class IperfTestManage(
-    val context: Context?,
     val tag: String = "IperfTestManage",
     var updateProgress: (Float) -> Unit,
     var stdout: (Iperf3OutputMonitor.LineResult, Boolean) -> Unit,
-    var stderr: (String) -> Unit,
+    var stderr: (Iperf3OutputMonitor.LineResult, String) -> Unit,
     var iperf3Parameters: Iperf3Parameters,
     private val onTestComplete: () -> Unit
 ) {
 
     private val mainScope = CoroutineScope(Dispatchers.Main)
     private val iperf3OutputMonitor = Iperf3OutputMonitor()
+    private var context: Context? = null
+
+    fun getCurrentLineResult() = iperf3OutputMonitor.getCurrentLineResult()
+
+
+
     @Volatile
     private var isIperfRunning = false
+
     // endregion
 
     // region Public Lifecycle
 
+    fun setContext(contextParam: Context?) { context = contextParam }
+
     suspend fun cancelTest(): Int {
         var rc = 0
+        if (context == null) return -1
+        stderr(iperf3OutputMonitor.getCurrentLineResult(), "Test Cancelled")
         IperfRunner.forceStop(
             createIperfCallback(
                 onLine =
                     {
                         val line = it.trim().removeSuffix("\n")
-                        var output = iperf3OutputMonitor.processCancelLine(line)
-                        stdout(output, true)
+                        val newLineResult = iperf3OutputMonitor.processCancelLine(line)
+                        stdout(newLineResult, true)
                         Log.d(tag, "forceStop: onLine: $line")
                     }, onError =
                     {
-                        val err = it.trim().removeSuffix("\n")
+                        val err = it.trim().removeSuffix("\n").removePrefix("\n")
                         isIperfRunning = false
-                        stderr("\n❌ Error: $err")
+                        stderr(iperf3OutputMonitor.getCurrentLineResult(), "❌ Error: $err")
                         onTestComplete()
                         //testCompleted.complete(Unit)
                         updateProgress(1.0f)
@@ -71,12 +82,18 @@ class IperfTestManage(
      * Starts the test with the provided arguments and configuration.
      */
     suspend fun startTest(): Int {
+        if (context == null) return -1
         Log.d(tag, "iperf3 JNI Bridge")
+
+        if (context == null) return -1
+
         var rc = 0
         updateProgress(0.0f)
+        iperf3OutputMonitor.reset()
+
         if (iperf3Parameters.durationSecs <= 0) {
             Log.e("Iperf3Runner", "Invalid duration: ${iperf3Parameters.durationSecs}")
-            stderr("Invalid duration: ${iperf3Parameters.durationSecs}")
+            stderr(iperf3OutputMonitor.getCurrentLineResult(), "Invalid duration: ${iperf3Parameters.durationSecs}")
             updateProgress(1.0f)
             return -1 // @withContext -1
         }
@@ -116,12 +133,12 @@ class IperfTestManage(
         Log.d(tag, "currentArgs: ${currentArgs.joinToString(",")}")
 
         val handler = CoroutineExceptionHandler { _, exception ->
-            stderr("🚨 Uncaught Exception: ${exception.localizedMessage}")
+            stderr(iperf3OutputMonitor.getCurrentLineResult(), "🚨 Uncaught Exception: ${exception.localizedMessage}")
             exception.printStackTrace()
             rc = -1
         }
 
-        val tempDirectory: String = if (context != null) context.cacheDir.toString() else ""
+        val tempDirectory: String = if (context != null) context!!.cacheDir.toString() else ""
         IperfRunner.setTempDir(tempDirectory)
 
         //val iperfJob = CoroutineScope(Dispatchers.IO + handler).launch {
@@ -132,7 +149,6 @@ class IperfTestManage(
         var intervalCount = -1L
         var started = false
         var numberOfMessages = 0
-        iperf3OutputMonitor.reset()
         iperf3OutputMonitor.setParallel(parallelStreams)
         val runJob = CoroutineScope(Dispatchers.IO + handler).launch {
             //val runJob = mainScope.launch(handler) {
@@ -143,17 +159,17 @@ class IperfTestManage(
                     onLine =
                         {
                             val line = it.trim().removeSuffix("\n")
-                            var output = iperf3OutputMonitor.processLine(line)
+                            val newLineResult = iperf3OutputMonitor.processLine(line)
                             Log.d(tag, "onLine: $line")
-                            if (output.resultEntry > intervalCount && !started) {
+                            if (newLineResult.resultEntry > intervalCount && !started) {
                                 started = true
-                                intervalCount = output.resultEntry
-                                stdout(output, false)
+                                intervalCount = newLineResult.resultEntry
+                                stdout(newLineResult, false)
                             }
-                            if (output.resultEntry > intervalCount || output.messages.size > numberOfMessages) {
-                                if (started && output.resultEntry > intervalCount) {
-                                    intervalCount = output.resultEntry
-                                    stdout(output, false)
+                            if (newLineResult.resultEntry > intervalCount || newLineResult.messages.size > numberOfMessages) {
+                                if (started && newLineResult.resultEntry > intervalCount) {
+                                    intervalCount = newLineResult.resultEntry
+                                    stdout(newLineResult, false)
                                     val progress =
                                         intervalCount.toFloat() / iperf3Parameters.durationSecs
                                     if (progress < 1.0) {
@@ -162,9 +178,9 @@ class IperfTestManage(
                                         updateProgress(1.0f)
                                     }
                                 }
-                                if (output.messages.size > numberOfMessages) {
-                                    numberOfMessages = output.messages.size
-                                    stdout(output, true)
+                                if (newLineResult.messages.size > numberOfMessages) {
+                                    numberOfMessages = newLineResult.messages.size
+                                    stdout(newLineResult, true)
                                 }
 
                             }
@@ -172,7 +188,7 @@ class IperfTestManage(
                         {
                             val err = it.trim().removeSuffix("\n")
                             isIperfRunning = false
-                            stderr("\n❌ Error: $err")
+                            stderr(iperf3OutputMonitor.getCurrentLineResult(), "❌ Error: $err")
                             onTestComplete()
                             //testCompleted.complete(Unit)
                             updateProgress(1.0f)

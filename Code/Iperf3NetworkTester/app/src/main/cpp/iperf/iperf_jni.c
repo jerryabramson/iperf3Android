@@ -79,6 +79,7 @@ void *readerThreadFunc(void *args_ptr) {
     jmethodID onOutput = (*env)->GetMethodID(env, callbackClass, "onOutput",
                                              "(Ljava/lang/String;)V");
 
+
     char buffer[1024];
     FILE *fp = fdopen(args->pipe_fd, "r");
 
@@ -120,7 +121,7 @@ Java_edu_bu_cs683_1jabramson_1project_iperf3_1network_1tester_runner_IperfRunner
     if (global_test && !global_test->done) {
         global_test->done = 1;
         iperf_set_send_state(global_test, IPERF_DONE);
-        shutdown(global_test->ctrl_sck, SHUT_RDWR);  // Unblocks select()
+        //shutdown(global_test->ctrl_sck, SHUT_RDWR);  // Unblocks select()
     }
 }
 

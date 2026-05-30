@@ -68,7 +68,7 @@ class Iperf3OutputMonitor {
 
     /** Reset all accumulated state for a new test run. */
    fun reset() {
-       currentLineResult = LineResult()
+        currentLineResult = LineResult()
         gathered = false
         lastResult = ""
         summaryResults = false
@@ -225,8 +225,10 @@ class Iperf3OutputMonitor {
         }
         currentLineResult.currentAvg = toHumanUnit(sum / historicalResults.size)
     }
-
+    fun getCurrentLineResult() = currentLineResult
 }
+
+
 fun getMaximum(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.maxRawBitsPerSec > Double.MIN_VALUE) toWholeNumber(lineResult.currentMax) else ""
 fun getMinimum(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.minRawBitsPerSec < Double.MAX_VALUE) toWholeNumber(lineResult.currentMin) else ""
 fun getAverage(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.avgRawBitsPerSec >= 0) toWholeNumber(lineResult.currentAvg) else ""

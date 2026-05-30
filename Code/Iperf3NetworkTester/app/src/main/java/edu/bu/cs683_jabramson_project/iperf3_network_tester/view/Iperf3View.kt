@@ -140,7 +140,7 @@ private fun RunButton(uiState: edu.bu.cs683_jabramson_project.iperf3_network_tes
                       isRunning: Boolean,
                       isFinished: Boolean = false) {
     var buttonColor = MaterialTheme.colorScheme.primary
-    if (isRunning) buttonColor = MaterialTheme.colorScheme.errorContainer
+    if (isRunning) buttonColor = MaterialTheme.colorScheme.onErrorContainer
     androidx.compose.material3.Button(
         modifier = Modifier.padding(end = 10.dp),
         shape = MaterialTheme.shapes.large,
@@ -151,9 +151,9 @@ private fun RunButton(uiState: edu.bu.cs683_jabramson_project.iperf3_network_tes
         //enabled = !isRunning || isFinished
     ) {
         if (!isRunning) {
-            Text(text = "Run", color = MaterialTheme.colorScheme.surfaceVariant)
+            Text(text = "Run", color = MaterialTheme.colorScheme.surface)
         } else {
-            Text(text = "Cancel", color = MaterialTheme.colorScheme.error)
+            Text(text = "Stop", color = MaterialTheme.colorScheme.surface)
         }
     }
 }
@@ -462,19 +462,40 @@ private fun BandwidthDisplay(uiState: edu.bu.cs683_jabramson_project.iperf3_netw
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = toWholeNumber(min),
+                text = "Min",
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                style = MaterialTheme.typography.labelSmall,
+            )
+            Text(
+                text = "Avg",
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                style = MaterialTheme.typography.labelSmall
+            )
+            Text(
+                text = "Max",
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                style = MaterialTheme.typography.labelSmall
+            )
+
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = toWholeNumber(min).trim(),
                 color = MaterialTheme.colorScheme.tertiary,
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.bodySmall,
             )
             Text(
                 text = toWholeNumber(avg),
                 //color = MaterialTheme.colorScheme.surfaceVariant,
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.bodySmall
             )
             Text(
                 text = toWholeNumber(max),
                 color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }
@@ -491,13 +512,13 @@ private fun ErrorSection(
         horizontalAlignment = Alignment.Start,
         modifier = Modifier.padding(start = 10.dp, end =  10.dp).fillMaxWidth()
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         HorizontalDivider(
-            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 1.dp, end = 1.dp),
             thickness = 4.dp,
             color = MaterialTheme.colorScheme.error
         )
-        LazyColumn(modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp)) {
+        LazyColumn(modifier = Modifier.fillMaxWidth().padding(start = 1.dp, end = 1.dp)) {
             items(uiState.errorLines.size) { index ->
                 ErrorLineItem(uiState.errorLines[index], monoStyle)
             }
@@ -513,7 +534,7 @@ private fun ErrorLineItem(text: String, style: TextStyle) {
             text = text,
             color = MaterialTheme.colorScheme.error,
             textAlign = TextAlign.Left,
-            style = style.copy(fontSize = 14.sp),
+            style = style.copy(fontSize = 13.sp),
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -526,17 +547,17 @@ private fun IperfMessagesSection(
 ) {
     Column() {
 
-        if (uiState.isVerbose || uiState.isDebugging || uiState.returnCode != 0 ||
-            (uiState.latestLine.isEmpty() && !uiState.isFinished)) {
+        if (uiState.isVerbose || uiState.isDebugging || uiState.errorLines.isNotEmpty() ||
+            ((uiState.latestLine.isEmpty() && !uiState.isFinished)))
+        {
             Spacer(modifier = Modifier.height(1.dp))
-            if (uiState.returnCode == 0) {
-                HorizontalDivider(
-                    modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
-                    thickness = 4.dp,
-                    color = MaterialTheme.colorScheme.tertiary
-                )
-            }
-
+            val defaultColor = if (uiState.returnCode != 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            val defaultThickness = if (uiState.returnCode != 0) 4.dp else 2.dp
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
+                thickness = defaultThickness,
+                color = defaultColor
+            )
             LazyColumn(modifier = Modifier.fillMaxWidth()) {
                 items(uiState.iperf3Messages.size) { index ->
                     IperfMessageItem(uiState.iperf3Messages[index], monoStyle)

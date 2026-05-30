@@ -36,7 +36,8 @@ fun toString(unitConvertedData: UnitConvertedData) = "${unitConvertedData.value}
 
 
 fun toWholeNumber(unitConvertedData: UnitConvertedData): String {
-    val ret = "%10.2f %s".format(Locale.US, unitConvertedData.value, unitConvertedData.unit)
+
+    val ret = if (unitConvertedData.value >  0)  "%10.2f %s".format(Locale.US, unitConvertedData.value, unitConvertedData.unit) else "%10.10s".format(Locale.US, "-----")
     return ret
 }
 
