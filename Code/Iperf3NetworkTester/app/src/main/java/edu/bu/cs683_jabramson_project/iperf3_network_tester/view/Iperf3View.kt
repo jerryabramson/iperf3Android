@@ -1,70 +1,75 @@
 // app/src/main/java/edu/bu/cs683_jabramson_project/iperf3_network_tester/ui/Iperf3View.kt
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.view
 
-import android.R.attr.end
-import android.R.attr.onClick
+//import androidx.hilt.navigation.compose.hiltViewModel
 import android.R.attr.thickness
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
-
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.AlertDialogDefaults.containerColor
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.RadioButton
-import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
-import edu.bu.cs683_jabramson_project.iperf3_network_tester.R
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.R
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme.Iperf3NetworkTesterTheme
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme.mesloFontFamily
-import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getAverage
-import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getMaximum
-import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getMinimum
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Iperf3OutputMonitor
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.UnitConvertedData
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getHeading
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getHeadingUL
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.toWholeNumber
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.DefaultUIValues
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.Iperf3RunViewModel
-import org.w3c.dom.Text
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RunIperf3Screen(viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewModel>()) {
+fun RunIperf3Screen(viewModel: Iperf3RunViewModel = hiltViewModel(
+    checkNotNull<ViewModelStoreOwner>(
+        LocalViewModelStoreOwner.current
+    ) {
+        "No ViewModelStoreOwner was provided via LocalViewModelStoreOwner"
+    }, null
+)
+) {
     val uiState by viewModel.uiStateFlow.collectAsState()
     val monoStyle = mesloMonoTextStyle()
     val fieldColors = textFieldColors()
@@ -92,21 +97,11 @@ fun RunIperf3Screen(viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewM
             )
         },
         bottomBar = {
-            BottomAppBar() {
-//                BottomBar()
-                Row(
-                    verticalAlignment = Alignment.Bottom,
-                )
-                {
-                    Text(text =  "Mobile Development Directed Study - Jerold Abramson",
-                        style = mesloMonoTextStyle(),
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.padding(start =  15.dp)
-
-                    )
-                }
-            }
+            BottomAppBar(
+                content = {
+                    ProjectBottomBar(uiState, viewModel)
+                },
+            )
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -127,6 +122,7 @@ fun RunIperf3Screen(viewModel: Iperf3RunViewModel = hiltViewModel<Iperf3RunViewM
         }
     }
 }
+
 
 
 /**
@@ -163,18 +159,49 @@ private fun RunButton(uiState: edu.bu.cs683_jabramson_project.iperf3_network_tes
  * Bottom bar for the UI.
  */
 @Composable
-private fun BottomBar() {
+private fun ProjectBottomBar(uiState: UiData, viewModel: Iperf3RunViewModel) {
     Row(verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier.padding(start = 10.dp).fillMaxWidth()) {
-        Text(
-            text = "Mobile Development Directed Study Application - Jerold Abramson",
-            fontSize = 10.sp
-        )
+        Column(modifier = Modifier.padding(end = 10.dp)) {
+            Text(
+                text = "Mobile Development Directed Study Application",
+                fontSize = 10.sp,
+            )
+            Text(
+                text = "Jerold Abramson",
+                fontSize = 12.sp,
+            )
+        }
+        DebugOnOffRadioButton(uiState, viewModel)
     }
 }
 
+
+/**
+ * Bottom bar for the UI.
+ */
+//@Preview(name="bottom bar")
 @Composable
-private fun mesloMonoTextStyle(): TextStyle = TextStyle(
+private fun ProjectBottomBarPreview() {
+    Row(verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier.padding(start = 10.dp).fillMaxWidth()) {
+        Column(modifier = Modifier.padding(end = 20.dp)) {
+            Text(
+                text = "Mobile Development Directed Study Application",
+                fontSize = 10.sp,
+            )
+            Text(
+                text = "Jerold Abramson",
+                fontSize = 8.sp,
+            )
+        }
+        DebugOnOffRadioButtonPreview(true)
+    }
+}
+@Composable
+fun mesloMonoTextStyle(): TextStyle = TextStyle(
     fontFamily = mesloFontFamily(),
     fontSize = 18.sp,
     letterSpacing = 0.2.sp,
@@ -219,7 +246,7 @@ private fun HostInputRow(
 ) {
     Row(
         verticalAlignment = Alignment.Top,
-        modifier = Modifier.padding(start = 10.dp).fillMaxWidth()
+        modifier = Modifier.padding(start = 2.dp).fillMaxWidth()
     ) {
         // placeholder = { Text(placeholder) },
          TextField(
@@ -228,8 +255,8 @@ private fun HostInputRow(
             onValueChange = viewModel::updateHostName,
             enabled = !uiState.isRunning,
             placeholder = { Text(DefaultUIValues.HOST_NAME, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary) },
-            modifier = Modifier.width(width = 210.dp).height(height = 50.dp).padding(end = 6.dp),
-            label = { Text("iPerf3 Server[:port]", style = monoStyle.copy(fontSize = 12.sp),) },
+            modifier = Modifier.width(width = 160.dp).height(height = 50.dp).padding(end = 4.dp),
+            label = { Text("iPerf3 Server[:port]", style = monoStyle.copy(fontSize = 10.sp),) },
             colors = colors,
             keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { viewModel.launch() })
         )
@@ -285,8 +312,9 @@ private fun StreamsAndDebugRow (
             modifier = Modifier.width(width = 90.dp).height(height = 50.dp).padding(end = 10.dp),
             colors = colors
         )
-        Spacer(modifier = Modifier.width(90.dp))
-        DebugOnOffRadioButton(viewModel, uiState.isDebugging, uiState.isVerbose, monoStyle)
+        //
+        // Spacer(modifier = Modifier.width(90.dp))
+        // DebugOnOffRadioButton(viewModel, uiState.isDebugging, uiState.isVerbose, monoStyle)
      }
 }
 
@@ -302,7 +330,7 @@ private fun StreamsAndDebugRow (
  *
  */
 @Composable
-private fun GenericNumericField(
+fun GenericNumericField(
     value: String,
     onValueChange: (String) -> Unit,
     enabled: Boolean,
@@ -311,13 +339,21 @@ private fun GenericNumericField(
     modifier: Modifier = Modifier,
     colors: androidx.compose.material3.TextFieldColors
 ) {
+    val st = MaterialTheme.typography.bodySmall
+
     TextField(
         value = value,
         onValueChange = onValueChange,
         enabled = enabled,
-        placeholder = { Text(placeholder, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary) },
+        placeholder = { Text(placeholder, style = st, color = MaterialTheme.colorScheme.tertiary) },
         modifier = modifier,
-        label = { Text(label, style = MaterialTheme.typography.bodySmall) },
+        label = {
+            Text(
+                text = label,
+                style = mesloMonoTextStyle(),
+                fontSize = 12.sp
+            )
+        },
         colors = colors,
         singleLine = true
     )
@@ -416,7 +452,7 @@ private fun LaunchingMessage(show: Boolean) {
 }
 
 @Composable
-private fun progressColors(isReverse: Boolean): Pair<androidx.compose.ui.graphics.Color, androidx.compose.ui.graphics.Color> {
+fun progressColors(isReverse: Boolean): Pair<androidx.compose.ui.graphics.Color, androidx.compose.ui.graphics.Color> {
     return if (!isReverse) {
         MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.surfaceVariant
     } else {
@@ -425,7 +461,7 @@ private fun progressColors(isReverse: Boolean): Pair<androidx.compose.ui.graphic
 }
 
 @Composable
-private fun ProgressPercent(uiState: edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData) {
+fun ProgressPercent(uiState: edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData) {
     val num = if (uiState.isReverse) 1f - uiState.progress else uiState.progress
     val percent = (num * 100).toInt()
     Text(
@@ -437,12 +473,12 @@ private fun ProgressPercent(uiState: edu.bu.cs683_jabramson_project.iperf3_netwo
 }
 
 @Composable
-private fun BandwidthDisplay(uiState: edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData) {
+fun BandwidthDisplay(uiState: edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-        text = uiState.lineResult.rawBandWidth,
+        text = uiState.lineResult.basicBandWidthString,
         color = MaterialTheme.colorScheme.primary,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth(),
@@ -450,7 +486,7 @@ private fun BandwidthDisplay(uiState: edu.bu.cs683_jabramson_project.iperf3_netw
         )
 
         HorizontalDivider(
-            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 2.dp, end = 2.dp),
             thickness = 2.dp,
             color = MaterialTheme.colorScheme.primary
         )
@@ -458,44 +494,44 @@ private fun BandwidthDisplay(uiState: edu.bu.cs683_jabramson_project.iperf3_netw
         var min = uiState.lineResult.currentMin
         var avg = uiState.lineResult.currentAvg
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 2.dp, end = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = "Min",
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary,
+                style = MaterialTheme.typography.labelMedium,
             )
             Text(
                 text = "Avg",
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                style = MaterialTheme.typography.labelSmall
+                color = MaterialTheme.colorScheme.secondary,
+                style = MaterialTheme.typography.labelMedium
             )
             Text(
                 text = "Max",
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                style = MaterialTheme.typography.labelSmall
+                color = MaterialTheme.colorScheme.secondary,
+                style = MaterialTheme.typography.labelMedium
             )
 
         }
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 2.dp, end = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = toWholeNumber(min).trim(),
-                color = MaterialTheme.colorScheme.tertiary,
-                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.bodyMedium,
             )
             Text(
                 text = toWholeNumber(avg),
-                //color = MaterialTheme.colorScheme.surfaceVariant,
-                style = MaterialTheme.typography.bodySmall
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.bodyMedium
             )
             Text(
                 text = toWholeNumber(max),
                 color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }
@@ -590,15 +626,31 @@ private fun DebugOutputSection(
     uiState: edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData,
     monoStyle: TextStyle
 ) {
-    if (!uiState.isDebugging || uiState.outputLines.isEmpty()) return
-
+    if (!uiState.isVerbose && !uiState.isDebugging) return
     Spacer(modifier = Modifier.height(4.dp))
     HorizontalDivider(
         modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
         thickness = 4.dp,
         color = MaterialTheme.colorScheme.tertiary
     )
-    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+    Spacer(modifier = Modifier.height(4.dp))
+
+    if (uiState.outputLines.isNotEmpty()) {
+        Column(modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp)) {
+            Text(
+                text = getHeading(),
+                textAlign = TextAlign.Left,
+                style = monoStyle.copy(fontSize = 14.sp),
+            )
+            Text(
+                text = getHeadingUL(),
+                textAlign = TextAlign.Left,
+                style = monoStyle.copy(fontSize = 14.sp),
+            )
+        }
+    }
+
+    LazyColumn(modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp)) {
         items(uiState.outputLines.size) { index ->
             DebugOutputItem(uiState.outputLines[index], monoStyle)
         }
@@ -607,12 +659,13 @@ private fun DebugOutputSection(
 
 @Composable
 private fun DebugOutputItem(text: String, style: TextStyle) {
-    Row(modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp)) {
+    Row() {
         Text(
             text = text,
             textAlign = TextAlign.Left,
             modifier = Modifier.fillMaxWidth(),
-            style = style
+            style = style.copy(fontSize = 14.sp),
+
         )
     }
 }
@@ -635,3 +688,163 @@ fun SelectableOption(selected: Boolean, onClick: () -> Unit, content: @Composabl
         content()
     }
 }
+
+val sampleOutputData = listOf(
+    "Skipped   0.00-1.00  35.6 Mbits/sec",
+    "8 Streams 1.00-2.00  35.6 Mbits/sec",
+    "...",
+    "...",
+    "...",
+    "...",
+    "sender    0.00-10.19  24.0 Mbits/sec",
+    "receiver  0.00-10.19  24.0 Mbits/sec",
+
+).toMutableList()
+
+val sampleIperf3Messages = listOf(
+    "🚀 Initiating iPerf3 client request...",
+    "Connecting to host jabramson.com, port 5201",
+    "Reverse mode, remote host 192.168.127.12 is sending",
+    "Local Host/IP: 192.168.1.32",
+    "Local Port: 48618",
+    "Remote Host/IP: 192.168.127.12",
+    "Remote Port: 5201",
+    "iperf Done."
+).toMutableList()
+
+val sampleStatistics = listOf(
+    "Average: 24.40 Mbits/sec",
+    "Maximum: 92.58 Mbits/sec",
+    "Minimum: 24.00 Mbits/sec",
+).toMutableList()
+
+val sampleLineResult = Iperf3OutputMonitor.LineResult(
+    currentMax = UnitConvertedData(10.19, "Mbits/sec"),
+    currentAvg = UnitConvertedData(24.40, "Mbits/sec"),
+    currentMin = UnitConvertedData(24.00, "Mbits/sec"),
+    basicBandWidthString = "35.6 Mbits/sec"
+)
+
+val sampleErrorLines = listOf(
+    "Error: Failed to bind to 192.168.127.12:5201: Address already in use",
+).toMutableList()
+
+val sampleUiState = UiData(
+    hostName = "jabramson.com",
+    durationSecs = "10",
+    parallelStreams = "8",
+    skip = "2",
+    isDebugging = true,
+    isVerbose = true,
+    isReverse = false,
+    isRunning = false,
+    isFinished = true,
+    iperf3Messages = sampleIperf3Messages,
+    bandWidth = "1.00-2.00    35.6 Mbits/sec",
+    progress =  0.33.toFloat(),
+    results = sampleStatistics,
+    outputLines = sampleOutputData,
+    lineResult = sampleLineResult,
+    errorLines = sampleErrorLines,
+    latestLine = "some output"
+)
+
+
+
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(name = "Iperf3Screen")
+@Composable
+fun PreviewIperf3Screen() {
+    val monoStyle = mesloMonoTextStyle()
+    val fieldColors = textFieldColors()
+    Iperf3NetworkTesterTheme() {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            /* Input rows */
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = {
+                            Row(
+                                //verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.width(140.dp)
+                                    .background(color = MaterialTheme.colorScheme.outlineVariant).padding(top =  5.dp, bottom =  5.dp),
+
+                            )
+                            {
+                                //SimpleToggleSwitchPreview(true)
+                                //Text("Hi")
+
+                                Text(
+                                    stringResource(id = R.string.app_name),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(
+                                        start = 10.dp,
+                                        bottom = 5.dp
+                                    )
+                                )
+                            }
+                        },
+                        actions = {
+                            UploadDownloadPreview()
+                            RunButtonPreview()
+                            //DebugOnOffRadioButtonPreview(true)
+                        },
+                    )
+                },
+                bottomBar = {
+                    BottomAppBar(modifier = Modifier.height(60.dp)) {
+                        ProjectBottomBarPreview()
+                    }
+                },
+            ) { padding ->
+                Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+                    HostInputRowPreview(fieldColors, monoStyle)
+                    //Spacer(modifier = Modifier.height(10.dp))
+                    //StreamsAndDebugRowPreview(fieldColors, monoStyle)
+
+                    /* Output rows */
+                    RunningColumnSectionPreview(sampleUiState, monoStyle)
+                    ResultsRowPreview(sampleUiState, monoStyle)
+                    IperfMessagesSectionPreview(sampleUiState, monoStyle)
+                    ErrorSectionPreview(sampleUiState, monoStyle)
+                    DebugOutputSectionPreview(sampleUiState, monoStyle)
+//                    Row(verticalAlignment =Alignment.Bottom) {
+//                        DebugOnOffRadioButtonPreview(true)
+//                    }
+
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Preview for the run button.
+ */
+
+//@Preview(name = "Run Button Preview")
+@Composable
+fun RunButtonPreview() {
+    val buttonColor = MaterialTheme.colorScheme.primary
+    androidx.compose.material3.Button(
+        modifier = Modifier.padding(end = 10.dp),
+        shape = MaterialTheme.shapes.large,
+        onClick =  {},
+        colors = ButtonDefaults.buttonColors(
+            containerColor = buttonColor
+        )
+        //enabled = !isRunning || isFinished
+    ) {
+        Text(text = "Run", color = MaterialTheme.colorScheme.surface)
+    }
+}
+
+
+
+
+

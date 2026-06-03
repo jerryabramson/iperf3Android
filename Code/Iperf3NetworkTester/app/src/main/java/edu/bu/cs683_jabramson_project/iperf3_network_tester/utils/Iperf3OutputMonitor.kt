@@ -1,7 +1,6 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.utils
 
 import android.annotation.SuppressLint
-import androidx.collection.emptyLongSet
 
 
 /**
@@ -18,7 +17,7 @@ class Iperf3OutputMonitor {
         var messages: MutableList<String> = emptyList<String>().toMutableList(),
 
         // interval number (1 to duration)
-        var resultEntry: Long = -1,
+        var intervalNumber: Long = -1,
 
         // statistics - converted to human-readable units
         var currentBandWidth : UnitConvertedData = UnitConvertedData(),
@@ -26,12 +25,13 @@ class Iperf3OutputMonitor {
         var currentMin: UnitConvertedData = UnitConvertedData(),
         var currentAvg: UnitConvertedData = UnitConvertedData(),
 
-        // raw output from iperf3
-        var rawBandWidth: String = "",
-        var rawOutputLine: String = "",
+        // processed output from iperf3
+        var basicBandWidthString: String = "",
+        var formattedOutputLine: String = "",
         var connectedString: String = "",
         var timeout: String = "",
         var rawAverage: String = "",
+        var rawOutputLine: String = "",
 
 
         // statistics - raw numeric values
@@ -46,14 +46,11 @@ class Iperf3OutputMonitor {
         var localPort: Long = -1L,
         var remotePort: Long = -1L,
 
-
         var lastResult: String = "",
 
         // -- getters for post-test summary (used after run completes) --
-
-
-
     )
+
 
     // -- accumulated state (private, no static fields) --
     private var currentLineResult = LineResult()
@@ -92,6 +89,7 @@ class Iperf3OutputMonitor {
     @SuppressLint("DefaultLocale")
     fun processLine(line: String): LineResult {
         val cleanLine = line.replace("\n", "")
+        currentLineResult.rawOutputLine = cleanLine
         val firstLeftBracket = cleanLine.indexOf('[')
         val firstRightBracket = cleanLine.indexOf(']')
         if (firstLeftBracket in 0..<firstRightBracket) {
@@ -101,7 +99,7 @@ class Iperf3OutputMonitor {
             if (id == "ID") {
                 if (!gathered) {
                     gathered = true
-                    currentLineResult.resultEntry = 0
+                    currentLineResult.intervalNumber = 0
                 }
             } else {
                 // Pre-gathering: extract connection details or collect messages
@@ -123,8 +121,8 @@ class Iperf3OutputMonitor {
                     // Post-gathering: interval / summary data
                     if (restOfLine.size >= 7) {
                         val intervalString = restOfLine[1].trim()
-                        val bitRateString = restOfLine[5].trim()
-                        val bitRateUnitString = restOfLine[6].trim()
+                        val bitRateString = restOfLine[5] //.trim()
+                        val bitRateUnitString = restOfLine[6] //.trim()
                         var sendOrReceive = ""
                         for (i in 7..10) {
                             if (i < restOfLine.size) {
@@ -142,14 +140,13 @@ class Iperf3OutputMonitor {
                         if (id.contains("SUM") || isSingleThread) {
                             val bitRateValue = bitRateString.toDoubleOrNull() ?: -1.0
                             currentLineResult.currentBandWidth = UnitConvertedData(bitRateValue, bitRateUnitString)
-                            val currentBandWidthString = toString(currentLineResult.currentBandWidth)
                             val intervalParts = intervalString.split("-")
-                            var intervalLong = currentLineResult.resultEntry
+                            var intervalLong = currentLineResult.intervalNumber
                             if (intervalParts.size == 2) {
                                 val intervalDouble = intervalParts[0].toDoubleOrNull() ?: 0.0
                                 intervalLong = intervalDouble.toLong()
                             }
-                            currentLineResult.rawBandWidth = "$bitRateString $bitRateUnitString"
+                            currentLineResult.basicBandWidthString = "$bitRateString $bitRateUnitString"
                             if (sendOrReceive.isEmpty()) {
                                 updateMax(bitRateValue, bitRateUnitString)
                                 updateMin(bitRateValue, bitRateUnitString)
@@ -159,13 +156,13 @@ class Iperf3OutputMonitor {
                             val timeLabel: String
                             when (sendOrReceive.lowercase()) {
                                 "(omitted)" -> {
-                                    intervalLong = currentLineResult.resultEntry + 1
+                                    intervalLong = currentLineResult.intervalNumber + 1
                                     lastOmitted = true
-                                    timeLabel = "skipped  "
+                                    timeLabel = "skipped"
                                 }
 
                                 "sender", "receiver" -> {
-                                    intervalLong = currentLineResult.resultEntry + 1
+                                    intervalLong = currentLineResult.intervalNumber + 1
                                     lastOmitted = false
                                     if (!finished) {
                                         finished = true
@@ -174,21 +171,21 @@ class Iperf3OutputMonitor {
                                         currentLineResult.rawAverage = "$bitRateString $bitRateUnitString"
                                         currentLineResult.currentAvg = UnitConvertedData(bitRateValue, bitRateUnitString)
                                     }
-                                    timeLabel = String.format("%9.9s", sendOrReceive)
+                                    timeLabel = String.format("%s", sendOrReceive)
                                 }
 
                                 else -> {
                                     lastOmitted = false
-                                    timeLabel = if (!isSingleThread) String.format("%d%8s", parallel, "streams") else String.format("%10.10s", "Running")
+                                    timeLabel = if (!isSingleThread) String.format("%2d %s", parallel, "streams") else String.format("%s", "Running")
 
                                 }
                             }
-                            currentLineResult.resultEntry = intervalLong
-                            currentLineResult.rawOutputLine =
-                                String.format("%s %-12.12s%s %s",
+                            currentLineResult.intervalNumber = intervalLong
+                            currentLineResult.formattedOutputLine =
+                                String.format("%10.10s %-12.12s%7.7s %-9.9s",
                                     timeLabel,
                                     intervalString,
-                                    bitRateString, bitRateUnitString)
+                                    bitRateString.trim(), bitRateUnitString)
 
                         }
                     }
@@ -228,7 +225,55 @@ class Iperf3OutputMonitor {
     fun getCurrentLineResult() = currentLineResult
 }
 
+fun getHeading(): String {
+    val heading = "%10.10s %-12.12s%7.7s %-9.9s".format(
+        "comment",
+        "Interval",
+        "bitrate",
+        "Unit"
+    )
+    return heading
+}
+
+fun getHeadingUL(): String {
+    val ul = "%10.10s %-12.12s%7.7s %-9.9s".format(
+        "----------",
+        "-----------",
+        "-------",
+        "---------"
+    )
+    return ul
+}
+
 
 fun getMaximum(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.maxRawBitsPerSec > Double.MIN_VALUE) toWholeNumber(lineResult.currentMax) else ""
 fun getMinimum(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.minRawBitsPerSec < Double.MAX_VALUE) toWholeNumber(lineResult.currentMin) else ""
 fun getAverage(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.avgRawBitsPerSec >= 0) toWholeNumber(lineResult.currentAvg) else ""
+fun printLineResult(lineResult: Iperf3OutputMonitor.LineResult): String {
+    val out = StringBuilder()
+    out.append("LineResult\n ")
+    lineResult.messages.indices.forEach {
+        val m = lineResult.messages[it]
+        out.append("             messages[$it] = $m\n ")
+    }
+    out.append("        Local Host: ${lineResult.localHost}\n")
+    out.append("       Remote Host: ${lineResult.remoteHost}\n")
+    out.append("        Local Port: ${lineResult.localPort}\n")
+    out.append("       Remote Port: ${lineResult.remotePort}\n")
+    out.append("       Last Result: ${lineResult.lastResult}\n")
+    out.append("      Result Entry: ${lineResult.intervalNumber}\n")
+    out.append(" Current Bandwidth: ${lineResult.currentBandWidth}\n")
+    out.append("       Current Max: ${lineResult.currentMax}\n")
+    out.append("       Current Min: ${lineResult.currentMin}\n")
+    out.append("       Current Avg: ${lineResult.currentAvg}\n")
+    out.append("   Basic Bandwidth: ${lineResult.basicBandWidthString}\n")
+    out.append("    Formatted Line: ${lineResult.formattedOutputLine}\n")
+    out.append("  Connected String: ${lineResult.connectedString}\n")
+    out.append("           Timeout: ${lineResult.timeout}\n")
+    out.append("       Raw Average: ${lineResult.rawAverage}\n")
+    out.append("  Max Raw Bits/sec: ${lineResult.maxRawBitsPerSec}\n")
+    out.append("  Min Raw Bits/sec: ${lineResult.minRawBitsPerSec}\n")
+    out.append("  Avg Raw Bits/sec: ${lineResult.avgRawBitsPerSec}\n")
+    out.append("  Cur Raw Bits/sec: ${lineResult.currentRawBitsPerSec}\n")
+    return out.toString()
+}

@@ -104,8 +104,8 @@ void *readerThreadFunc(void *args_ptr) {
  */
 JNIEXPORT void JNICALL
 Java_edu_bu_cs683_1jabramson_1project_iperf3_1network_1tester_runner_IperfRunner_forceStop(JNIEnv *env,
-                                                                                           jobject thiz,
-                                                                                           jobject callback)
+                      jobject thiz,
+                      jobject callback)
 {
     stop_requested = true;
 
@@ -114,14 +114,16 @@ Java_edu_bu_cs683_1jabramson_1project_iperf3_1network_1tester_runner_IperfRunner
                                              "(Ljava/lang/String;)V");
 
     jstring statusMsg = (*env)->NewStringUTF(env,
-                                             "[iPerf JNI] Requested graceful stop of iPerf test.");
+                                             "{iPerf JNI} Requested graceful stop of iPerf test.");
     (*env)->CallVoidMethod(env, callback, onOutput, statusMsg);
     (*env)->DeleteLocalRef(env, statusMsg);
 
     if (global_test && !global_test->done) {
         global_test->done = 1;
         iperf_set_send_state(global_test, IPERF_DONE);
-        //shutdown(global_test->ctrl_sck, SHUT_RDWR);  // Unblocks select()
+
+        // Unblocks select() - should not be needed, and can cause race condition
+        //shutdown(global_test->ctrl_sck, SHUT_RDWR);
     }
 }
 
@@ -163,7 +165,7 @@ Java_edu_bu_cs683_1jabramson_1project_iperf3_1network_1tester_runner_IperfRunner
     // ───── Create and initialize iperf test ─────
     global_test = iperf_new_test();
     if (!global_test) {
-        jstring errMsg = (*env)->NewStringUTF(env, "Failed to create iperf test");
+        jstring errMsg = (*env)->NewStringUTF(env, "{iPerf JNI} ❌ Failed to create iperf test");
         (*env)->CallVoidMethod(env, callback, onError, errMsg);
         (*env)->DeleteLocalRef(env, errMsg);
         return;
@@ -173,7 +175,7 @@ Java_edu_bu_cs683_1jabramson_1project_iperf3_1network_1tester_runner_IperfRunner
     // ───── Setup pipe to capture iperf output ─────
     int pipefd[2];
     if (pipe(pipefd) < 0) {
-        jstring errMsg = (*env)->NewStringUTF(env, "Failed to create output pipe");
+        jstring errMsg = (*env)->NewStringUTF(env, "{iPerf JNI} ❌ Failed to create output pipe");
         (*env)->CallVoidMethod(env, callback, onError, errMsg);
         (*env)->DeleteLocalRef(env, errMsg);
         iperf_free_test(global_test);
@@ -206,7 +208,7 @@ Java_edu_bu_cs683_1jabramson_1project_iperf3_1network_1tester_runner_IperfRunner
     pthread_create(&reader_thread, NULL, readerThreadFunc, cb_args);
 
     // ───── Notify start ─────
-    jstring initMsg = (*env)->NewStringUTF(env, "🚀 Initiating iPerf3 client request...\n");
+    jstring initMsg = (*env)->NewStringUTF(env, "{iPerf JNI} 🚀 Initiating iPerf3 client request...\n");
     (*env)->CallVoidMethod(env, callback, onOutput, initMsg);
     (*env)->DeleteLocalRef(env, initMsg);
 
@@ -218,34 +220,33 @@ Java_edu_bu_cs683_1jabramson_1project_iperf3_1network_1tester_runner_IperfRunner
         (*env)->DeleteLocalRef(env, errMsg);
     }
 
-    // ───── Cleanup ─────
-//    jstring finishMsg = (*env)->NewStringUTF(env, "🚀 Finished iPerf3 client request.\n");
-//    (*env)->CallVoidMethod(env, callback, onOutput, finishMsg);
-//    (*env)->DeleteLocalRef(env, initMsg);
-    fflush(fp);
-    fclose(fp);
-
+    // ───── Cleanup global memory ─────
     if (global_test) {
         iperf_free_test(global_test);
         global_test = NULL;
     }
+    fflush(fp);
+    fclose(fp);
 
+    // ───── cleanup thread(s) and malloc'ed memory ─────
     pthread_join(reader_thread, NULL);
-
     for (int i = 0; i < argc; i++) {
         free(argv[i]);
     }
 
-    jstring finalMsg;
+    // ───── Test finished cleanly? ─────
+    jstring finalMsg = (*env)->NewStringUTF(env, "{iPerf JNI} 🚀 Test completed successfully.\n");
+
+    // ───── with error ─────
     if (stop_requested) {
-        finalMsg = (*env)->NewStringUTF(env, "[iPerf JNI] Test was stopped by user.");
-    } else if (result < 0) {
-        finalMsg = (*env)->NewStringUTF(env, "[iPerf JNI] Test failed to complete successfully.");
-    } else {
-        finalMsg = (*env)->NewStringUTF(env, "[iPerf JNI] Test completed successfully.");
+        finalMsg = (*env)->NewStringUTF(env,  "{iPerf JNI} 🚀 Test was stopped by user.\n");
+    } else if ( result < 0) {
+        finalMsg = (*env)->NewStringUTF(env,"{iPerf JNI} ❌ Test failed to complete successfully.\n");
     }
     (*env)->CallVoidMethod(env, callback, onOutput, finalMsg);
     (*env)->DeleteLocalRef(env, finalMsg);
+    fflush(fp);
+    fclose(fp);
 
     // ───── Final cleanup ─────
     stop_requested = false;

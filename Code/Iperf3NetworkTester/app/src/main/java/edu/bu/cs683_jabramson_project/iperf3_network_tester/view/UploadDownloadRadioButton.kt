@@ -14,8 +14,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.Iperf3RunViewModel
 
 @Composable
@@ -39,4 +41,24 @@ fun UploadDownload(
             }
         }
     }
+}
+
+@Preview("Upload/Download Radio Button")
+@Composable
+fun UploadDownloadPreview(isReverse: Boolean = true,  style: androidx.compose.ui.text.TextStyle = androidx.compose.ui.text.TextStyle(fontSize = 11.sp)) {
+    val selected = if (isReverse) "Down" else "Up"
+    Column(horizontalAlignment = Alignment.Start,
+        modifier = Modifier.selectableGroup().padding(end=6.dp))
+    {
+        //Text(text = "Direction", style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
+        listOf("Down", "Up").forEach { text ->
+            SelectableOption(
+                selected = text == selected,
+                onClick = { {} }
+            ) {
+                Text(text = text, style = style, color = MaterialTheme.colorScheme.secondary)
+            }
+        }
+    }
+
 }

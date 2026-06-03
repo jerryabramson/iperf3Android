@@ -1,10 +1,8 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel
 
-import android.R.attr.tag
 import android.content.Context
 import android.util.Log
 import android.util.Log.e
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,6 +14,7 @@ import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Iperf3OutputMo
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getAverage
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getMaximum
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getMinimum
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.printLineResult
 
 
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -96,7 +95,6 @@ class Iperf3RunViewModel @Inject constructor (
         updateProgress = ::updateProgress,                       // floating point track of progress
         stdout = ::saveOutputLine,                               // output from iperf3
         stderr = ::saveErrorLine,                                // errors from iperf3
-        iperf3Parameters = _uiStateFlow.value.iperf3Parameters,  // parameters for iperf3
         onTestComplete = { completeTest() }
     )
 
@@ -135,7 +133,6 @@ class Iperf3RunViewModel @Inject constructor (
                 context = savedStateHandle.get<Context>("context")
             )
         }
-        iperfManager.setContext(_uiStateFlow.value.context)
     }
 
 
@@ -145,7 +142,8 @@ class Iperf3RunViewModel @Inject constructor (
      * @param lineResult The output line from the process execution.
      */
     fun saveOutputLine(lineResult: Iperf3OutputMonitor.LineResult, newMessage: Boolean = false) {
-        Log.d(tag, "stdout: $lineResult.rawOutputLine")
+        val lineResultStr = printLineResult(lineResult)
+        Log.d(tag, "viewModel: saveOutputLine() -> $lineResultStr")
         val lastMessages = lineResult.messages.toMutableList()
 
         if (newMessage) {
@@ -161,14 +159,14 @@ class Iperf3RunViewModel @Inject constructor (
             _uiStateFlow.update {
                 it.copy(
                     lastLine = it.latestLine,
-                    bandWidth = lineResult.rawBandWidth,
-                    latestLine = lineResult.rawOutputLine,
+                    bandWidth = lineResult.basicBandWidthString,
+                    latestLine = lineResult.formattedOutputLine,
                     outputLines = it.outputLines.also {
-                        if (lineResult.rawOutputLine.isNotEmpty()) {
-                            it.add(lineResult.rawOutputLine)
+                        if (lineResult.formattedOutputLine.isNotEmpty()) {
+                            it.add(lineResult.formattedOutputLine)
                         }
                     },
-                    resultNumber = lineResult.resultEntry,
+                    resultNumber = lineResult.intervalNumber,
                     iperf3Messages = it.iperf3Messages.toMutableList(),
                     lineResult =  lineResult
                 )
@@ -192,15 +190,6 @@ class Iperf3RunViewModel @Inject constructor (
     }
 
     fun launchOrCancel() {
-//        iperfManager = IperfTestManage(
-//            context = _uiStateFlow.value.context,                    // local context
-//            updateProgress = ::updateProgress,                       // floating point track of progress
-//            stdout = ::saveOutputLine,                               // output from iperf3
-//            stderr = ::saveErrorLine,                                // errors from iperf3
-//            iperf3Parameters = _uiStateFlow.value.iperf3Parameters,  // parameters for iperf3
-//            onTestComplete = { completeTest() } )
-
-        iperfManager.setContext(_uiStateFlow.value.context)      // local context
         if (!_uiStateFlow.value.isRunning) launch() else cancel()
     }
 
@@ -282,17 +271,18 @@ class Iperf3RunViewModel @Inject constructor (
                 parallelStreams = if (it.parallelStreams != DefaultUIValues.PARALLEL_STREAMS) it.parallelStreams else ""
             )
         }
+        Log.d(tag, "Async Cancel Started")
         viewModelScope.launch {cancelTest() }
-        Log.d(tag, "Async finished Completed")
+        Log.d(tag, "Async Cancel Completed")
     }
 
     suspend fun cancelTest(): Int {
-        var rc: Int = 0
+        var rc: Int
         try {
             rc = iperfManager.cancelTest()
         } catch (e: Exception) {
             /* Shouldn't ever get here, since guards are already in place */
-            Log.e(tag, "Failed to cancel iperf3: ${e.message}", e)
+            e(tag, "Failed to cancel iperf3: ${e.message}", e)
             saveErrorLine(_uiStateFlow.value.lineResult, "Failed to cancel iperf3: ${e.message}")
             rc = -1
         }
@@ -305,7 +295,7 @@ class Iperf3RunViewModel @Inject constructor (
      * @return The return code from the iperf3 binary.
      */
     suspend fun runIperf3(): Int {
-        var rc: Int? = 0
+        var rc: Int
         try {
             // Prepare the UI state for the test.
 
@@ -317,18 +307,24 @@ class Iperf3RunViewModel @Inject constructor (
             _uiStateFlow.value.iperf3Parameters.parallelStreams = myInt(_uiStateFlow.value.parallelStreams.ifEmpty { DefaultUIValues.PARALLEL_STREAMS })
             _uiStateFlow.value.iperf3Parameters.durationSecs = myInt(uiStateFlow.value.durationSecs.ifEmpty { DefaultUIValues.DURATION })
             _uiStateFlow.value.iperf3Parameters.skip = myInt(_uiStateFlow.value.skip.ifEmpty { DefaultUIValues.SKIP })
+
+            /**
+             * Prepare to launch the iperf3 library as a suspended function.
+             */
             updateProgress(0f)
-            rc = iperfManager.startTest()
+            Log.d(tag, "sync iperfManager.startTest() starts")
+            rc = iperfManager.startTest(_uiStateFlow.value.context, _uiStateFlow.value.iperf3Parameters)
+            Log.d(tag, "sync iperfManager.startTest() ends")
+
             _uiStateFlow.update {
                 it.copy(
                     lineResult = iperfManager.getCurrentLineResult(),
                     resultNumber = -1
                 )
             }
-            Log.d(tag, "runIperf3 Completed, return code: $rc")
         } catch (e: Exception) {
             /* Shouldn't ever get here, since guards are already in place */
-            Log.e(tag, "Failed to run iperf3: ${e.message}", e)
+            e(tag, "Failed to run iperf3: ${e.message}", e)
             saveErrorLine(_uiStateFlow.value.lineResult, "Failed to run iperf3: ${e.message}")
             rc = -1
         }
@@ -337,7 +333,7 @@ class Iperf3RunViewModel @Inject constructor (
 
         //Update the UI state to show that the test is finished and
         // Provide the return code to the UI.
-        var outputCount = _uiStateFlow.value.lineResult.resultEntry
+        var outputCount = _uiStateFlow.value.lineResult.intervalNumber
         if (rc == 0) {
             // only update statistics on a successful run
             if (outputCount > 0 ) {
@@ -394,13 +390,15 @@ class Iperf3RunViewModel @Inject constructor (
 
     /**
      * Callback to update the progress bar.
-     * @param l The new progress value.
+     * @param newProgress The new progress value.
+     * We implement the progress bar as a floating point value between 0.0 and 1.0.
+     * If uploading, the progress bar goes from 0.0 to 1.0 [left to right]
+     * If downloading, the progress bar goes from 1.0 to 0.0 [right to left]
      */
-    fun updateProgress(l: Float) {
-        var p = l
-        if (_uiStateFlow.value.isReverse) { p = 1.0f - l }
+    fun updateProgress(newProgress: Float) {
+        val normalizedProgress = if (!_uiStateFlow.value.isReverse) newProgress else 1.0f - newProgress
         _uiStateFlow.update {
-            it.copy(progress = p)
+            it.copy(progress = normalizedProgress)
         }
     }
 
@@ -529,12 +527,29 @@ class Iperf3RunViewModel @Inject constructor (
         }
     }
 
+    fun setIperf3Parameters(iperf3Parameters: Iperf3Parameters) {
+        _uiStateFlow.update {
+            it.copy(iperf3Parameters = iperf3Parameters)
+        }
+    }
 
     fun setContext(context: Context) {
         _uiStateFlow.update {
             it.copy(context = context)
         }
     }
+
+    fun toggleDebug()  {
+        var newState = !_uiStateFlow.value.isDebugging
+        _uiStateFlow.update {
+            it.copy(
+                isDebugging = newState,
+                isVerbose = newState
+            )
+        }
+
+    }
+
     /**
      * User entered a new trace level.
      * @param traceLevel The new value for trace level.

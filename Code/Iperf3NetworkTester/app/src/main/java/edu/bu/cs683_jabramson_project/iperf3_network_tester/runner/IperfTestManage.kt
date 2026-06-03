@@ -1,12 +1,11 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.runner
 
 
-import android.R.attr.tag
 import android.content.Context
 import android.util.Log
-import androidx.room.util.newStringBuilder
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Iperf3OutputMonitor
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.view.progressColors
 
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -19,34 +18,28 @@ import kotlinx.coroutines.launch
  * Supports advanced features like smart ramp-up, hybrid tests, and automatic bandwidth reduction.
  */
 class IperfTestManage(
-    val tag: String = "IperfTestManage",
     var updateProgress: (Float) -> Unit,
     var stdout: (Iperf3OutputMonitor.LineResult, Boolean) -> Unit,
     var stderr: (Iperf3OutputMonitor.LineResult, String) -> Unit,
-    var iperf3Parameters: Iperf3Parameters,
     private val onTestComplete: () -> Unit
 ) {
+    val tag: String = "IperfTestManage"
 
-    private val mainScope = CoroutineScope(Dispatchers.Main)
     private val iperf3OutputMonitor = Iperf3OutputMonitor()
+
     private var context: Context? = null
-
-    fun getCurrentLineResult() = iperf3OutputMonitor.getCurrentLineResult()
-
-
+    private var iperf3Parameters: Iperf3Parameters = Iperf3Parameters()
 
     @Volatile
     private var isIperfRunning = false
 
-    // endregion
-
-    // region Public Lifecycle
-
-    fun setContext(contextParam: Context?) { context = contextParam }
+    fun getCurrentLineResult() = iperf3OutputMonitor.getCurrentLineResult()
 
     suspend fun cancelTest(): Int {
         var rc = 0
         if (context == null) return -1
+        if (!isIperfRunning) return -1
+
         stderr(iperf3OutputMonitor.getCurrentLineResult(), "Test Cancelled")
         IperfRunner.forceStop(
             createIperfCallback(
@@ -81,40 +74,43 @@ class IperfTestManage(
     /**
      * Starts the test with the provided arguments and configuration.
      */
-    suspend fun startTest(): Int {
-        if (context == null) return -1
-        Log.d(tag, "iperf3 JNI Bridge")
+    suspend fun startTest(contextParam: Context?, params: Iperf3Parameters): Int
+    {
+        if (contextParam == null) return -1
 
-        if (context == null) return -1
+        Log.d(tag, "iperf3 JNI Bridge Starting")
 
+        /**
+         * 1. Initialize the iperf3 parameters
+         */
         var rc = 0
-        updateProgress(0.0f)
-        iperf3OutputMonitor.reset()
-
-        if (iperf3Parameters.durationSecs <= 0) {
-            Log.e("Iperf3Runner", "Invalid duration: ${iperf3Parameters.durationSecs}")
+        iperf3Parameters = params
+        context = contextParam
+        val reverse = if (iperf3Parameters.isReverse)  "--reverse" else ""
+        val flush = if (iperf3Parameters.forceFlush) "--forceflush" else ""
+        val serverPort = iperf3Parameters.serverPort
+        val localTimeout = if (iperf3Parameters.timeout != 0L) iperf3Parameters.timeout else 3000L
+        val parallelStreams = iperf3Parameters.parallelStreams
+        val durationSecs = iperf3Parameters.durationSecs
+        if (durationSecs <= 0 || durationSecs > (60 * 60 * 12)) {
+            Log.e("Iperf3Runner", "Invalid duration: $durationSecs. Must be between 1 second to 12 hours.")
             stderr(iperf3OutputMonitor.getCurrentLineResult(), "Invalid duration: ${iperf3Parameters.durationSecs}")
             updateProgress(1.0f)
-            return -1 // @withContext -1
+            return -1
         }
-        //val command = iperf3Parameters.iperf3Binary.absolutePath
 
+        /**
+         *  2. Set the default iperf3 temp directory to the app's cache directory'. Some Android
+         *     devices may not allow writing to the external storage directory (/data/data/tmp).
+         */
+        val tempDirectory: String = if (context != null) context!!.cacheDir.toString() else ""
+        IperfRunner.setTempDir(tempDirectory)
+        Log.i(tag, "tempDirectory: $tempDirectory")
 
-        Log.d(tag, "tempDirectory: tempDirectory")
-        var flush = ""
-        var reverse = ""
-        val serverPort = iperf3Parameters.serverPort
-        val parallelStreams = iperf3Parameters.parallelStreams
-        if (iperf3Parameters.forceFlush) flush = "--forceflush"
-        if (iperf3Parameters.isReverse) reverse = "--reverse"
-        var localTimeout = 3000L
-        if (iperf3Parameters.timeout != 0L) localTimeout = iperf3Parameters.timeout
-
-        Log.d(tag, "iperf3 JNI beginning test")
-        updateProgress(0.toFloat())
-
-
-        //var currentArgs = args.copyOf()
+        /**
+         * 3. Construct the iperf3 command line arguments.
+         *    **Note** that argv[0] must be set to the program name.
+         */
         val currentArgs = arrayOf(
             "iperf3",
             "--client", iperf3Parameters.serverHost,
@@ -128,30 +124,37 @@ class IperfTestManage(
             "--omit", iperf3Parameters.skip.toString(),
             //"-V"
         )
-
-
         Log.d(tag, "currentArgs: ${currentArgs.joinToString(",")}")
 
+        /**
+         * 4. Initialize the output monitor.
+         */
+        iperf3OutputMonitor.reset()
+        iperf3OutputMonitor.setParallel(parallelStreams)
+        updateProgress(0.toFloat())
+
+        /**
+         * 5. Create a coroutine exception handler for uncaught exceptions
+         */
         val handler = CoroutineExceptionHandler { _, exception ->
             stderr(iperf3OutputMonitor.getCurrentLineResult(), "🚨 Uncaught Exception: ${exception.localizedMessage}")
             exception.printStackTrace()
             rc = -1
         }
 
-        val tempDirectory: String = if (context != null) context!!.cacheDir.toString() else ""
-        IperfRunner.setTempDir(tempDirectory)
-
-        //val iperfJob = CoroutineScope(Dispatchers.IO + handler).launch {
-            //val testCompleted = CompletableDeferred<Unit>()
-            Log.d("IperfTestManage: ", "startTest")
+        /**
+         * 6. Start the actual iperf3 test using the coroutine scope.
+         */
+        Log.d("IperfTestManage: ", "startTest")
+        isIperfRunning = true
 
             // region Start Actual iPerf Test
-        var intervalCount = -1L
-        var started = false
-        var numberOfMessages = 0
-        iperf3OutputMonitor.setParallel(parallelStreams)
+        var lastIntervalCount = -1L
+        var lastNumberOfMessages = 0
+        val zeroProgress = 0.0.toFloat()
+        val finishedProgress = 1.0.toFloat()
+        var runningProgress = zeroProgress
         val runJob = CoroutineScope(Dispatchers.IO + handler).launch {
-            //val runJob = mainScope.launch(handler) {
             isIperfRunning = true
             Log.d("IperfTestManage: ", "runJob")
             IperfRunner.runIperfLive(
@@ -160,29 +163,17 @@ class IperfTestManage(
                         {
                             val line = it.trim().removeSuffix("\n")
                             val newLineResult = iperf3OutputMonitor.processLine(line)
-                            Log.d(tag, "onLine: $line")
-                            if (newLineResult.resultEntry > intervalCount && !started) {
-                                started = true
-                                intervalCount = newLineResult.resultEntry
-                                stdout(newLineResult, false)
-                            }
-                            if (newLineResult.resultEntry > intervalCount || newLineResult.messages.size > numberOfMessages) {
-                                if (started && newLineResult.resultEntry > intervalCount) {
-                                    intervalCount = newLineResult.resultEntry
-                                    stdout(newLineResult, false)
-                                    val progress =
-                                        intervalCount.toFloat() / iperf3Parameters.durationSecs
-                                    if (progress < 1.0) {
-                                        updateProgress(progress)
-                                    } else {
-                                        updateProgress(1.0f)
-                                    }
+                            Log.d(tag, "Callback -> onLine(\"${newLineResult.rawOutputLine}\")")
+                            if (newLineResult.intervalNumber > lastIntervalCount
+                                || newLineResult.messages.size > lastNumberOfMessages) {
+                                stdout(newLineResult, newLineResult.messages.size > lastNumberOfMessages)
+                                if (newLineResult.intervalNumber > lastIntervalCount) {
+                                    runningProgress = lastIntervalCount.toFloat() / iperf3Parameters.durationSecs
                                 }
-                                if (newLineResult.messages.size > numberOfMessages) {
-                                    numberOfMessages = newLineResult.messages.size
-                                    stdout(newLineResult, true)
-                                }
-
+                                runningProgress = if (runningProgress > finishedProgress) finishedProgress else runningProgress
+                                updateProgress(runningProgress)
+                                lastIntervalCount = newLineResult.intervalNumber
+                                lastNumberOfMessages = newLineResult.messages.size
                             }
                         }, onError =
                         {
@@ -204,6 +195,7 @@ class IperfTestManage(
             )
 
         }
+        isIperfRunning = false
         runJob.join()
         runJob.cancel()
         return rc //@withContext -1

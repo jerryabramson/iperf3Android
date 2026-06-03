@@ -68,12 +68,12 @@ fun Iperf3NetworkTesterTheme(
         else -> LightColorScheme
     }
 
-    val view = LocalView.current
-    SideEffect {
-        val window = (view.context as Activity).window
+    //val view = LocalView.current
+    //SideEffect {
+        //val window = (view.context as Activity).window
         //window.statusBarColor = colorScheme.primary
         //WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
-    }
+    //}
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
