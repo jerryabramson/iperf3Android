@@ -1,6 +1,8 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.utils
 
 import android.annotation.SuppressLint
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Units.ZERO_VALUE_STRING
+import java.util.Locale
 
 
 /**
@@ -16,8 +18,9 @@ class Iperf3OutputMonitor {
         // iperf3 messages
         var messages: MutableList<String> = emptyList<String>().toMutableList(),
 
-        // interval number (1 to duration)
+        // interval number (1 to duration, can go backwards with Omit)
         var intervalNumber: Long = -1,
+        var totalSamples: Long = -1,
 
         // statistics - converted to human-readable units
         var currentBandWidth : UnitConvertedData = UnitConvertedData(),
@@ -138,6 +141,7 @@ class Iperf3OutputMonitor {
 
                         // Only process SUM lines or single-thread intervals
                         if (id.contains("SUM") || isSingleThread) {
+
                             val bitRateValue = bitRateString.toDoubleOrNull() ?: -1.0
                             currentLineResult.currentBandWidth = UnitConvertedData(bitRateValue, bitRateUnitString)
                             val intervalParts = intervalString.split("-")
@@ -147,12 +151,6 @@ class Iperf3OutputMonitor {
                                 intervalLong = intervalDouble.toLong()
                             }
                             currentLineResult.basicBandWidthString = "$bitRateString $bitRateUnitString"
-                            if (sendOrReceive.isEmpty()) {
-                                updateMax(bitRateValue, bitRateUnitString)
-                                updateMin(bitRateValue, bitRateUnitString)
-                                historicalResults.add(fromHumanUnit(currentLineResult.currentBandWidth.value, currentLineResult.currentBandWidth.unit))
-                                updateRunningAverage(historicalResults)
-                            }
                             val timeLabel: String
                             when (sendOrReceive.lowercase()) {
                                 "(omitted)" -> {
@@ -167,25 +165,37 @@ class Iperf3OutputMonitor {
                                     if (!finished) {
                                         finished = true
                                         summaryResults = true
+                                        currentLineResult.totalSamples++
                                         currentLineResult.currentBandWidth = UnitConvertedData(bitRateValue, bitRateString)
                                         currentLineResult.rawAverage = "$bitRateString $bitRateUnitString"
                                         currentLineResult.currentAvg = UnitConvertedData(bitRateValue, bitRateUnitString)
                                     }
                                     timeLabel = String.format("%s", sendOrReceive)
                                 }
-
                                 else -> {
                                     lastOmitted = false
-                                    timeLabel = if (!isSingleThread) String.format("%2d %s", parallel, "streams") else String.format("%s", "Running")
+                                    historicalResults.add(fromHumanUnit(currentLineResult.currentBandWidth.value, currentLineResult.currentBandWidth.unit))
+                                    updateRunningAverage(historicalResults)
+                                    updateMax(bitRateValue, bitRateUnitString)
+                                    updateMin(bitRateValue, bitRateUnitString)
+                                    currentLineResult.totalSamples++
+                                    timeLabel =
+                                        if (!isSingleThread) String.format("%2d %s", parallel, "streams")
+                                        else String.format("%s", "Running")
 
                                 }
                             }
                             currentLineResult.intervalNumber = intervalLong
                             currentLineResult.formattedOutputLine =
-                                String.format("%10.10s %-12.12s%7.7s %-9.9s",
+                                String.format("%10.10s %-10.10s%4.4s %-9.9s %7.7s %7.7s %7.7s",
                                     timeLabel,
                                     intervalString,
-                                    bitRateString.trim(), bitRateUnitString)
+                                    bitRateString.trim(),
+                                    bitRateUnitString,
+                                    toMbs(currentLineResult.avgRawBitsPerSec),
+                                    toMbs(currentLineResult.minRawBitsPerSec),
+                                    toMbs(currentLineResult.maxRawBitsPerSec))
+
 
                         }
                     }
@@ -221,30 +231,41 @@ class Iperf3OutputMonitor {
             sum += historicalResults[i]
         }
         currentLineResult.currentAvg = toHumanUnit(sum / historicalResults.size)
+        currentLineResult.avgRawBitsPerSec = sum / historicalResults.size
     }
     fun getCurrentLineResult() = currentLineResult
 }
 
 fun getHeading(): String {
-    val heading = "%10.10s %-12.12s%7.7s %-9.9s".format(
+    val heading = "%10.10s %-10.10s%4.4s %-9.9s %7.7s %7.7s %7.7s".format(
         "comment",
         "Interval",
-        "bitrate",
-        "Unit"
+        "rate",
+        "Unit",
+        "Avg",
+        "Max",
+        "Min"
     )
     return heading
 }
 
 fun getHeadingUL(): String {
-    val ul = "%10.10s %-12.12s%7.7s %-9.9s".format(
+    val ul = "%10.10s %-10.10s%4.4s %-9.9s %7.7s %7.7s %7.7s".format(
         "----------",
-        "-----------",
+        "---------",
+        "----",
+        "---------",
         "-------",
-        "---------"
-    )
+        "-------",
+        "-------"
+
+
+        )
     return ul
 }
 
+fun getSampleSize(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.totalSamples > 0)
+    "%10d".format(Locale.US, lineResult.totalSamples) else ""
 
 fun getMaximum(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.maxRawBitsPerSec > Double.MIN_VALUE) toWholeNumber(lineResult.currentMax) else ""
 fun getMinimum(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.minRawBitsPerSec < Double.MAX_VALUE) toWholeNumber(lineResult.currentMin) else ""

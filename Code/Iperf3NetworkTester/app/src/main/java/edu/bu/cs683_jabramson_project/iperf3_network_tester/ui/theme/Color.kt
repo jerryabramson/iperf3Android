@@ -14,7 +14,7 @@ val White = Color(0xFFFFFFFF)
 val BrightRed = Color(0xFFF00055)
 
 val Grey40 = Color(0x44444444)
-val Grey80 = Color(0x88888888)
+val Grey80 = Color(0xaaaaaaaa)
 val Grey90 = Color(0xEEEEEEEE)
 
 val Purple40 = Color(0xFF6650a4)

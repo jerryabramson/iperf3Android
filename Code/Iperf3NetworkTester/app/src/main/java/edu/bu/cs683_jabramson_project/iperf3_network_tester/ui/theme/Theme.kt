@@ -22,23 +22,23 @@ import androidx.core.view.WindowCompat
 import androidx.room.ForeignKey
 
 val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80,
-    onError = Red40,
-    background = White,
-    onErrorContainer = BrightRed,
-    surfaceDim = Grey90
+ //   primary = Purple80,
+//    secondary = PurpleGrey80,
+//    tertiary = Pink80,
+//    onError = Red40,
+//    background = White,
+//    onErrorContainer = BrightRed,
+    //surfaceDim = Grey80
 )
 
  val LightColorScheme = lightColorScheme(
-     primary = Purple40,
-     secondary = PurpleGrey40,
-     tertiary = Pink40,
-     onError = Purple40,
-     background = Black,
-     onErrorContainer = Red90,
-     surfaceDim =  Grey80
+ //    primary = Purple40,
+ //    secondary = PurpleGrey40,
+ //    tertiary = Pink40,
+ //    onError = Purple40,
+ //    background = Black,
+ //    onErrorContainer = Red90,
+     //surfaceDim =  Grey40
 
     /* Other default colors to override */
     /*surface = Color(0xFFFFFBFE),

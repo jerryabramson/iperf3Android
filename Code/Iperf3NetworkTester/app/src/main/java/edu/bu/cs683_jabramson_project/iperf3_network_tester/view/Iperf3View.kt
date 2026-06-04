@@ -3,6 +3,7 @@ package edu.bu.cs683_jabramson_project.iperf3_network_tester.view
 
 //import androidx.hilt.navigation.compose.hiltViewModel
 import android.R.attr.thickness
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -109,7 +111,6 @@ fun RunIperf3Screen(viewModel: Iperf3RunViewModel = hiltViewModel(
             /* Input rows */
             HostInputRow(uiState, viewModel, fieldColors, monoStyle)
             Spacer(modifier = Modifier.height(10.dp))
-            StreamsAndDebugRow(uiState, viewModel, fieldColors, monoStyle)
 
             /* Output rows */
             ResultsRow(uiState, monoStyle)
@@ -244,79 +245,73 @@ private fun HostInputRow(
     monoStyle: TextStyle
 
 ) {
-    Row(
-        verticalAlignment = Alignment.Top,
-        modifier = Modifier.padding(start = 2.dp).fillMaxWidth()
-    ) {
-        // placeholder = { Text(placeholder) },
-         TextField(
-            value = uiState.hostName,
-            textStyle = MaterialTheme.typography.bodySmall,
-            onValueChange = viewModel::updateHostName,
-            enabled = !uiState.isRunning,
-            placeholder = { Text(DefaultUIValues.HOST_NAME, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary) },
-            modifier = Modifier.width(width = 160.dp).height(height = 50.dp).padding(end = 4.dp),
-            label = { Text("iPerf3 Server[:port]", style = monoStyle.copy(fontSize = 10.sp),) },
-            colors = colors,
-            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { viewModel.launch() })
-        )
-        GenericNumericField(
-            value = uiState.durationSecs,
-            onValueChange = viewModel::setDuration,
-            enabled = !uiState.isRunning,
-            placeholder = "10",
-            label = "Time",
-            modifier = Modifier.width(width = 70.dp).height(height = 50.dp).padding(end = 2.dp),
-            colors = colors
-        )
+    Column() {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp)
+        ) {
+            // placeholder = { Text(placeholder) },
+            TextField(
+                value = uiState.hostName,
+                onValueChange = viewModel::updateHostName,
+                enabled = !uiState.isRunning,
+                placeholder = {
+                    Text(
+                        DefaultUIValues.HOST_NAME,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                },
+                modifier = Modifier.width(width = 150.dp).height(height = 50.dp)
+                    .padding(end = 2.dp),
+                label = {
+                    Text(
+                        "iPerf3 Server[:port]",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                },
+                colors = colors,
+                singleLine = true,
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { viewModel.launch() })
+            )
+            GenericNumericField(
+                value = uiState.durationSecs,
+                onValueChange = viewModel::setDuration,
+                enabled = !uiState.isRunning,
+                placeholder = "10",
+                label = "Time",
+                modifier = Modifier.width(width = 70.dp).height(height = 50.dp).padding(end = 2.dp),
+                colors = colors
+            )
+            UploadDownload(uiState, viewModel)
 
-        UploadDownloadRadioButtons(uiState, viewModel, monoStyle = monoStyle.copy(fontSize = 13.sp))
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 4.dp)
+        ) {
+
+            GenericNumericField(
+                value = uiState.parallelStreams,
+                onValueChange = viewModel::setParallelStreams,
+                enabled = !sampleUiState.isRunning,
+                placeholder = "8",
+                label = "Streams",
+                modifier = Modifier.padding(end = 4.dp).width(width = 90.dp).height(height = 50.dp),
+                colors = colors
+            )
+            GenericNumericField(
+                value = uiState.skip,
+                onValueChange = viewModel::setSkip,
+                enabled = !sampleUiState.isRunning,
+                placeholder = "2",
+                label = "Omit",
+                modifier = Modifier.padding(end = 4.dp).width(width = 80.dp).height(height = 50.dp),
+                colors = colors,
+
+                )
+        }
     }
 }
 
-/**
- * Numeric inputs for the UI.
- * Consists of:
- *    1. Numeric field for the parallel streams
- *    2. Numeric field for the skip/omit
- *    3. Debug on/off radio button
- *    4. Upload/download radio button
-*  @param uiState the current state of the UI
- * @param viewModel the view model for the UI
- * @param colors the colors for the text fields
- * @param monoStyle the style for the monospaced text
- */
-@Composable
-private fun StreamsAndDebugRow (
-    uiState: edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData,
-    viewModel: Iperf3RunViewModel,
-    colors: androidx.compose.material3.TextFieldColors,
-    monoStyle: TextStyle
-) {
-    Row(modifier = Modifier.fillMaxWidth().padding(start = 10.dp)) {
-        GenericNumericField(
-            value = uiState.parallelStreams,
-            onValueChange = viewModel::setParallelStreams,
-            enabled = !uiState.isRunning,
-            placeholder = "8",
-            label = "Streams",
-            modifier = Modifier.width(width = 130.dp).height(height = 50.dp).padding(end = 10.dp),
-            colors = colors
-        )
-        GenericNumericField(
-            value = uiState.skip,
-            onValueChange = viewModel::setSkip,
-            enabled = !uiState.isRunning,
-            placeholder = "2",
-            label = "Omit",
-            modifier = Modifier.width(width = 90.dp).height(height = 50.dp).padding(end = 10.dp),
-            colors = colors
-        )
-        //
-        // Spacer(modifier = Modifier.width(90.dp))
-        // DebugOnOffRadioButton(viewModel, uiState.isDebugging, uiState.isVerbose, monoStyle)
-     }
-}
 
 /**
  * Used for numeric fields in the UI. Expected to be part of a row or column.
@@ -339,19 +334,18 @@ fun GenericNumericField(
     modifier: Modifier = Modifier,
     colors: androidx.compose.material3.TextFieldColors
 ) {
-    val st = MaterialTheme.typography.bodySmall
-
     TextField(
         value = value,
         onValueChange = onValueChange,
         enabled = enabled,
-        placeholder = { Text(placeholder, style = st, color = MaterialTheme.colorScheme.tertiary) },
+        placeholder = {
+            Text(placeholder, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
+        },
         modifier = modifier,
         label = {
             Text(
                 text = label,
-                style = mesloMonoTextStyle(),
-                fontSize = 12.sp
+                style = MaterialTheme.typography.bodySmall,
             )
         },
         colors = colors,
@@ -359,21 +353,7 @@ fun GenericNumericField(
     )
 }
 
-/**
- * Debug the on / off radio button for the UI.
- * @param viewModel the view model for the UI
-  * @param monoStyle the style for the monospaced text
- */
-@Composable
-private fun UploadDownloadRadioButtons(
-    uiState: edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData,
-    viewModel: Iperf3RunViewModel,
-    monoStyle: TextStyle
-) {
-    if (!uiState.isRunning) {
-        UploadDownload(viewModel, uiState.isReverse, MaterialTheme.typography.bodyLarge)
-    }
-}
+
 
 /**
  * Results row for the UI.
@@ -460,15 +440,22 @@ fun progressColors(isReverse: Boolean): Pair<androidx.compose.ui.graphics.Color,
     }
 }
 
+
 @Composable
 fun ProgressPercent(uiState: edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData) {
     val num = if (uiState.isReverse) 1f - uiState.progress else uiState.progress
     val percent = (num * 100).toInt()
+
+    @SuppressLint("DefaultLocale")
+    val iter = String.format("%3d / %3.3s",
+        uiState.lineResult.intervalNumber,
+        uiState.durationSecs)
+
     Text(
-        text = "${percent}% complete",
+        text = "${percent}% complete [$iter]",
         modifier = Modifier.fillMaxWidth(),
+        fontSize = 18.sp,
         textAlign = TextAlign.Center,
-        fontSize = 18.sp
     )
 }
 
@@ -627,6 +614,9 @@ private fun DebugOutputSection(
     monoStyle: TextStyle
 ) {
     if (!uiState.isVerbose && !uiState.isDebugging) return
+
+    val fontSize = 14.sp
+    val style = monoStyle.copy(fontSize = fontSize)
     Spacer(modifier = Modifier.height(4.dp))
     HorizontalDivider(
         modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
@@ -640,38 +630,43 @@ private fun DebugOutputSection(
             Text(
                 text = getHeading(),
                 textAlign = TextAlign.Left,
-                style = monoStyle.copy(fontSize = 14.sp),
+                style = style,
+                color = MaterialTheme.colorScheme.tertiary
             )
             Text(
                 text = getHeadingUL(),
                 textAlign = TextAlign.Left,
-                style = monoStyle.copy(fontSize = 14.sp),
+                style = style,
+                color = MaterialTheme.colorScheme.tertiary
             )
         }
     }
 
     LazyColumn(modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp)) {
         items(uiState.outputLines.size) { index ->
-            DebugOutputItem(uiState.outputLines[index], monoStyle)
+            DebugOutputItem(uiState.outputLines[index], style)
         }
     }
 }
 
 @Composable
-private fun DebugOutputItem(text: String, style: TextStyle) {
+fun DebugOutputItem(text: String, style: TextStyle) {
     Row() {
         Text(
             text = text,
             textAlign = TextAlign.Left,
             modifier = Modifier.fillMaxWidth(),
-            style = style.copy(fontSize = 14.sp),
+            style = style,
+            color = MaterialTheme.colorScheme.tertiary
 
         )
     }
 }
 
 @Composable
-fun SelectableOption(selected: Boolean, onClick: () -> Unit, content: @Composable () -> Unit) {
+fun SelectableOption(enabled: Boolean = true, selected: Boolean, onClick: () -> Unit, content: @Composable () -> Unit) {
+    val selectedColor = if (!enabled) androidx.compose.material3.RadioButtonDefaults.colors().disabledSelectedColor else RadioButtonDefaults.colors().selectedColor
+    val unSelectedColor = if (!enabled) androidx.compose.material3.RadioButtonDefaults.colors().disabledUnselectedColor else RadioButtonDefaults.colors().unselectedColor
     Row(
         Modifier.selectable(
             selected = selected,
@@ -683,7 +678,8 @@ fun SelectableOption(selected: Boolean, onClick: () -> Unit, content: @Composabl
     ) {
         RadioButton(selected = selected,
             onClick = onClick,
-            modifier = Modifier.height(25.dp)
+            modifier = Modifier.height(25.dp),
+            colors = if (selected) RadioButtonDefaults.colors(selectedColor = selectedColor) else RadioButtonDefaults.colors(unselectedColor = unSelectedColor)
         )
         content()
     }
@@ -761,7 +757,7 @@ fun PreviewIperf3Screen() {
     val fieldColors = textFieldColors()
     Iperf3NetworkTesterTheme() {
         Surface(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(5.dp),
             color = MaterialTheme.colorScheme.background
         ) {
             /* Input rows */
@@ -771,39 +767,32 @@ fun PreviewIperf3Screen() {
                         title = {
                             Row(
                                 //verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.width(140.dp)
-                                    .background(color = MaterialTheme.colorScheme.outlineVariant).padding(top =  5.dp, bottom =  5.dp),
+                                modifier = Modifier
+                                    .background(color = MaterialTheme.colorScheme.onPrimaryContainer).padding(start = 5.dp)
 
                             )
                             {
-                                //SimpleToggleSwitchPreview(true)
-                                //Text("Hi")
-
-                                Text(
-                                    stringResource(id = R.string.app_name),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(
-                                        start = 10.dp,
-                                        bottom = 5.dp
-                                    )
-                                )
+                                Text(style = MaterialTheme.typography.titleLarge, text = stringResource(id = R.string.app_name), color = MaterialTheme.colorScheme.surface)
+                                //Text(, style = MaterialTheme.typography.titleLarge, Text(text = "Run", color = MaterialTheme.colorScheme.surface))
                             }
                         },
                         actions = {
-                            UploadDownloadPreview()
-                            RunButtonPreview()
-                            //DebugOnOffRadioButtonPreview(true)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                //UploadDownloadPreview()
+                                RunButtonPreview()
+                                //DebugOnOffRadioButtonPreview(true)
+                            }
                         },
                     )
                 },
                 bottomBar = {
-                    BottomAppBar(modifier = Modifier.height(60.dp)) {
+                    BottomAppBar(modifier = Modifier.height(50.dp)) {
                         ProjectBottomBarPreview()
                     }
                 },
             ) { padding ->
-                Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-                    HostInputRowPreview(fieldColors, monoStyle)
+                Column(modifier = Modifier.padding(padding).padding(start = 10.dp, end = 10.dp)) {
+                    HostInputRowPreview(fieldColors)
                     //Spacer(modifier = Modifier.height(10.dp))
                     //StreamsAndDebugRowPreview(fieldColors, monoStyle)
 
@@ -812,7 +801,7 @@ fun PreviewIperf3Screen() {
                     ResultsRowPreview(sampleUiState, monoStyle)
                     IperfMessagesSectionPreview(sampleUiState, monoStyle)
                     ErrorSectionPreview(sampleUiState, monoStyle)
-                    DebugOutputSectionPreview(sampleUiState, monoStyle)
+                    DebugOutputSection(sampleUiState, monoStyle)
 //                    Row(verticalAlignment =Alignment.Bottom) {
 //                        DebugOnOffRadioButtonPreview(true)
 //                    }
@@ -832,12 +821,9 @@ fun PreviewIperf3Screen() {
 fun RunButtonPreview() {
     val buttonColor = MaterialTheme.colorScheme.primary
     androidx.compose.material3.Button(
-        modifier = Modifier.padding(end = 10.dp),
         shape = MaterialTheme.shapes.large,
         onClick =  {},
-        colors = ButtonDefaults.buttonColors(
-            containerColor = buttonColor
-        )
+        colors = ButtonDefaults.buttonColors(containerColor = buttonColor)
         //enabled = !isRunning || isFinished
     ) {
         Text(text = "Run", color = MaterialTheme.colorScheme.surface)

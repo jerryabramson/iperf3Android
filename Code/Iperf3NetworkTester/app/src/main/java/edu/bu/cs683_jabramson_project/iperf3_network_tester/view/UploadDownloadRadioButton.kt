@@ -1,43 +1,53 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.view
 
-import androidx.compose.foundation.layout.Arrangement
+
+import android.R.attr.enabled
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.selection.selectable
+
+import androidx.compose.foundation.layout.width
+
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.Iperf3RunViewModel
 
+
+/**
+ * Upload/Download radio buttons for the UI
+ * @param viewModel the view model for the UI
+ */
 @Composable
 fun UploadDownload(
-    viewModel: Iperf3RunViewModel,
-    isReverse: Boolean,
-    style: androidx.compose.ui.text.TextStyle
+    uiState: edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData,
+    viewModel: Iperf3RunViewModel
 ) {
-    val selected = if (isReverse) "Down" else "Up"
-    viewModel.setDownload(isReverse)
-    Column(horizontalAlignment = Alignment.Start,
-        modifier = Modifier.selectableGroup().padding(end=2.dp))
+    val color = if (uiState.isRunning) androidx.compose.material3.RadioButtonDefaults.colors().disabledSelectedColor else RadioButtonDefaults.colors().selectedColor
+    val isReverse = uiState.isReverse
+    val selected = if (isReverse) "Download" else "Upload"
+    if (uiState.isRunning) viewModel.setDownload(isReverse)
+    Column(
+        horizontalAlignment = Alignment.Start,
+        modifier = Modifier.selectableGroup().width(width = 130.dp)
+    )
     {
-        //Text(text = "Direction", style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
-        listOf("Down", "Up").forEach { text ->
+        listOf("Download", "Upload").forEach { text ->
             SelectableOption(
+                enabled = !uiState.isRunning,
                 selected = text == selected,
-                onClick = { viewModel.setUploadDownload(text) }
+                onClick = { if (!uiState.isRunning) viewModel.setUploadDownload(text) },
             ) {
-                Text(text = text, style = style, color = MaterialTheme.colorScheme.secondary)
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = color
+                )
             }
         }
     }
@@ -45,18 +55,17 @@ fun UploadDownload(
 
 @Preview("Upload/Download Radio Button")
 @Composable
-fun UploadDownloadPreview(isReverse: Boolean = true,  style: androidx.compose.ui.text.TextStyle = androidx.compose.ui.text.TextStyle(fontSize = 11.sp)) {
-    val selected = if (isReverse) "Down" else "Up"
+fun UploadDownloadPreview(isReverse: Boolean = true,  style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.titleSmall) {
+    val selected = if (isReverse) "Download" else "Upload"
     Column(horizontalAlignment = Alignment.Start,
-        modifier = Modifier.selectableGroup().padding(end=6.dp))
+        modifier = Modifier.selectableGroup().width(width = 110.dp))
     {
-        //Text(text = "Direction", style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
-        listOf("Down", "Up").forEach { text ->
+        listOf("Download", "Upload").forEach { text ->
             SelectableOption(
                 selected = text == selected,
                 onClick = { {} }
             ) {
-                Text(text = text, style = style, color = MaterialTheme.colorScheme.secondary)
+                Text(text = text, style = style, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

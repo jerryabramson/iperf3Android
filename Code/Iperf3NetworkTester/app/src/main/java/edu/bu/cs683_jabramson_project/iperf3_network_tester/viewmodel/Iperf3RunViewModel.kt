@@ -1,6 +1,7 @@
 package edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel
 
 import android.content.Context
+import android.provider.SyncStateContract.Helpers.update
 import android.util.Log
 import android.util.Log.e
 import androidx.lifecycle.SavedStateHandle
@@ -12,8 +13,10 @@ import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3ResultsD
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.runner.IperfTestManage
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Iperf3OutputMonitor
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getAverage
+
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getMaximum
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getMinimum
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getSampleSize
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.printLineResult
 
 
@@ -304,16 +307,22 @@ class Iperf3RunViewModel @Inject constructor (
             _uiStateFlow.value.iperf3Parameters.forceFlush = _uiStateFlow.value.forceFlush
 
             // Numerics
-            _uiStateFlow.value.iperf3Parameters.parallelStreams = myInt(_uiStateFlow.value.parallelStreams.ifEmpty { DefaultUIValues.PARALLEL_STREAMS })
-            _uiStateFlow.value.iperf3Parameters.durationSecs = myInt(uiStateFlow.value.durationSecs.ifEmpty { DefaultUIValues.DURATION })
-            _uiStateFlow.value.iperf3Parameters.skip = myInt(_uiStateFlow.value.skip.ifEmpty { DefaultUIValues.SKIP })
+            _uiStateFlow.value.iperf3Parameters.parallelStreams =
+                myInt(_uiStateFlow.value.parallelStreams.ifEmpty { DefaultUIValues.PARALLEL_STREAMS })
+            _uiStateFlow.value.iperf3Parameters.durationSecs =
+                myInt(uiStateFlow.value.durationSecs.ifEmpty { DefaultUIValues.DURATION })
+            _uiStateFlow.value.iperf3Parameters.skip =
+                myInt(_uiStateFlow.value.skip.ifEmpty { DefaultUIValues.SKIP })
 
             /**
              * Prepare to launch the iperf3 library as a suspended function.
              */
             updateProgress(0f)
             Log.d(tag, "sync iperfManager.startTest() starts")
-            rc = iperfManager.startTest(_uiStateFlow.value.context, _uiStateFlow.value.iperf3Parameters)
+            rc = iperfManager.startTest(
+                _uiStateFlow.value.context,
+                _uiStateFlow.value.iperf3Parameters
+            )
             Log.d(tag, "sync iperfManager.startTest() ends")
 
             _uiStateFlow.update {
@@ -330,26 +339,26 @@ class Iperf3RunViewModel @Inject constructor (
         }
 
 
-
         //Update the UI state to show that the test is finished and
         // Provide the return code to the UI.
-        var outputCount = _uiStateFlow.value.lineResult.intervalNumber
-        if (rc == 0) {
-            // only update statistics on a successful run
-            if (outputCount > 0 ) {
-                var max = getMaximum(_uiStateFlow.value.lineResult)
-                var min = getMinimum(_uiStateFlow.value.lineResult)
-                var avg = getAverage(_uiStateFlow.value.lineResult)
-                _uiStateFlow.update { it.copy(results = it.results.also { it.add("Average: $avg") }) }
-                _uiStateFlow.update { it.copy(results = it.results.also { it.add("Maximum: $max") }) }
-                _uiStateFlow.update { it.copy(results = it.results.also { it.add("Minimum: $min") }) }
-            } else {
-                _uiStateFlow.update { it.copy(results = it.results.also { it.add("No Results") }) }
-            }
-        } else if (outputCount > 0 ) {
+        if (rc != 0) {
             // Only need this on failure conditions
             _uiStateFlow.update { data -> data.copy(results = data.results.also { it.add("Error: Return Code = $rc") }) }
         }
+        val outputCount = _uiStateFlow.value.lineResult.intervalNumber
+        if (outputCount > 0) {
+            val exe = getSampleSize(_uiStateFlow.value.lineResult)
+            val max = getMaximum(_uiStateFlow.value.lineResult)
+            val min = getMinimum(_uiStateFlow.value.lineResult)
+            val avg = getAverage(_uiStateFlow.value.lineResult)
+            if (!exe.isEmpty()) _uiStateFlow.update { it.copy(results = it.results.also { it.add("Samples: $exe") }) }
+            if (!avg.isEmpty()) _uiStateFlow.update { it.copy(results = it.results.also { it.add("Average: $avg") }) }
+            if (!max.isEmpty()) _uiStateFlow.update { it.copy(results = it.results.also { it.add("Maximum: $max") }) }
+            if (!min.isEmpty()) _uiStateFlow.update { it.copy(results = it.results.also { it.add("Minimum: $min") }) }
+        } else {
+            _uiStateFlow.update { it.copy(results = it.results.also { it.add("No Results") }) }
+        }
+
 
         // Provide the return code to the UI.
         // Clear the hostName field for the UI.
@@ -503,7 +512,7 @@ class Iperf3RunViewModel @Inject constructor (
      */
     fun setUploadDownload(str: String) {
         _uiStateFlow.update {
-            it.copy(isReverse = str.lowercase(getDefault()) == "down")
+            it.copy(isReverse = str.lowercase(getDefault()) == "download")
         }
     }
 

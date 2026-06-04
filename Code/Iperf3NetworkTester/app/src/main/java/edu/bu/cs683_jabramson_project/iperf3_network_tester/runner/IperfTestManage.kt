@@ -171,6 +171,7 @@ class IperfTestManage(
                                     runningProgress = lastIntervalCount.toFloat() / iperf3Parameters.durationSecs
                                 }
                                 runningProgress = if (runningProgress > finishedProgress) finishedProgress else runningProgress
+                                runningProgress = if (runningProgress < zeroProgress) zeroProgress else runningProgress
                                 updateProgress(runningProgress)
                                 lastIntervalCount = newLineResult.intervalNumber
                                 lastNumberOfMessages = newLineResult.messages.size
