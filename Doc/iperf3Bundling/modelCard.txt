@@ -1,0 +1,15 @@
+Model Information
+Current model details and capabilities
+Model	
+Nemotron-3-Nano-30B-A3B-UD-Q8_K_XL.gguf
+File Path
+/home/jerry/models/nemotron3-gguf/Nemotron-3-Nano-30B-A3B-UD-Q8_K_XL.gguf
+Context Size	262,144 tokens
+Training Context	1,048,576 tokens
+Model Size	37.66 GB
+Parameters	31.58B
+Embedding Size	2,688
+Vocabulary Size	131,072 tokens
+Vocabulary Type	2
+Parallel Slots	4
+Build Info	b8400-cf23ee244

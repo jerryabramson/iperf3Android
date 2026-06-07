@@ -1,0 +1,42 @@
+// Top-level build file where you can add configuration options common to all subprojects/modules.
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    dependencies {
+         //For KGP
+        classpath(libs.kotlin.gradle.plugin)
+
+        // For KSP
+        classpath(libs.symbol.processing.gradle.plugin)
+    }
+}
+ 
+ plugins {
+     alias(libs.plugins.android.application) apply false
+     alias(libs.plugins.kotlin.compose) apply false
+     alias(libs.plugins.hilt) apply false
+     //id("com.google.dagger.hilt-android") version "2.48" apply false  // ← Match libs.versions.toml hilt version
+ }
+ 
+ // Task to start the emulator
+  val startEmulator by tasks.register<Exec>("startEmulator") {
+      var sdkDir = System.getenv("ANDROID_SDK_ROOT")
+      if (sdkDir == null) {
+          val properties = java.util.Properties()
+          properties.load(File("local.properties").inputStream())
+          sdkDir = properties.getProperty("sdk.dir")
+      }
+      if (sdkDir == null) {
+          throw GradleException("Could not locate Android SDK. Set ANDROID_SDK_ROOT or sdk.dir in local.properties")
+      }
+      val emulator = File(sdkDir, "emulator/emulator").absolutePath
+      // We run the emulator in the background and then exit the task immediately.
+      // The emulator will continue to run in the background.
+      // We use nohup and run in background so that the Gradle task doesn't block.
+      commandLine("bash", "-c", "nohup $emulator -avd 'Pixel 6 API 36.0' > /dev/null 2>&1 & echo \$!")
+  }
+  
+  
