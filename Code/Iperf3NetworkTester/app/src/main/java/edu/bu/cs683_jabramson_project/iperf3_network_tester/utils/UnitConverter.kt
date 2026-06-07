@@ -87,6 +87,6 @@ fun toMbs(current: Double): String {
         val perSec = current / MBITS
         return "%4d%s".format(perSec.toInt(), "mbs")
     } else {
-        return ""
+        return "  ***"
     }
 }

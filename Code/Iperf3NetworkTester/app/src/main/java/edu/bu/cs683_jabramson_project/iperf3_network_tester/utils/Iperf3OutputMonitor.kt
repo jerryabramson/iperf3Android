@@ -21,6 +21,7 @@ class Iperf3OutputMonitor {
         // interval number (1 to duration, can go backwards with Omit)
         var intervalNumber: Long = -1,
         var totalSamples: Long = -1,
+        var totalOmitted: Long = 0,
 
         // statistics - converted to human-readable units
         var currentBandWidth : UnitConvertedData = UnitConvertedData(),
@@ -114,10 +115,8 @@ class Iperf3OutputMonitor {
                         currentLineResult.remotePort = restOfLine[9].toLongOrNull() ?: -1L
                         currentLineResult.connectedString = restOfLine[5]
                         currentLineResult.timeout = restOfLine[6]
-                        currentLineResult.messages.add("    Local Host/IP: ${currentLineResult.localHost}")
-                        currentLineResult.messages.add("       Local Port: ${currentLineResult.localPort}")
-                        currentLineResult.messages.add("   Remote Host/IP: ${currentLineResult.remoteHost}")
-                        currentLineResult.messages.add("      Remote Port: ${currentLineResult.remotePort}")
+                        currentLineResult.messages.add(" Local Host:port ${currentLineResult.localHost}:${currentLineResult.localPort}")
+                        currentLineResult.messages.add("Remote Host:port ${currentLineResult.remoteHost}:${currentLineResult.remotePort}")
                         gathered = true
                     }
                 } else {
@@ -157,6 +156,7 @@ class Iperf3OutputMonitor {
                                     intervalLong = currentLineResult.intervalNumber + 1
                                     lastOmitted = true
                                     timeLabel = "skipped"
+                                    currentLineResult.totalOmitted++
                                 }
 
                                 "sender", "receiver" -> {
@@ -187,7 +187,7 @@ class Iperf3OutputMonitor {
                             }
                             currentLineResult.intervalNumber = intervalLong
                             currentLineResult.formattedOutputLine =
-                                String.format("%10.10s %-10.10s%4.4s %-9.9s %7.7s %7.7s %7.7s",
+                                String.format("%10.10s %-10.10s %4.4s %-9.9s %7.7s %7.7s %7.7s",
                                     timeLabel,
                                     intervalString,
                                     bitRateString.trim(),
@@ -237,20 +237,20 @@ class Iperf3OutputMonitor {
 }
 
 fun getHeading(): String {
-    val heading = "%10.10s %-10.10s%4.4s %-9.9s %7.7s %7.7s %7.7s".format(
+    val heading = "%10.10s %-10.10s %4.4s %-9.9s %7.7s %7.7s %7.7s".format(
         "comment",
         "Interval",
         "rate",
         "Unit",
         "Avg",
-        "Max",
-        "Min"
+        "Min",
+        "Max"
     )
     return heading
 }
 
 fun getHeadingUL(): String {
-    val ul = "%10.10s %-10.10s%4.4s %-9.9s %7.7s %7.7s %7.7s".format(
+    val ul = "%10.10s %-10.10s %4.4s %-9.9s %7.7s %7.7s %7.7s".format(
         "----------",
         "---------",
         "----",
@@ -265,7 +265,7 @@ fun getHeadingUL(): String {
 }
 
 fun getSampleSize(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.totalSamples > 0)
-    "%10d".format(Locale.US, lineResult.totalSamples) else ""
+    "%7d    %d omitted".format(Locale.US, lineResult.totalSamples, lineResult.totalOmitted) else ""
 
 fun getMaximum(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.maxRawBitsPerSec > Double.MIN_VALUE) toWholeNumber(lineResult.currentMax) else ""
 fun getMinimum(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.minRawBitsPerSec < Double.MAX_VALUE) toWholeNumber(lineResult.currentMin) else ""

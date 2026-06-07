@@ -615,7 +615,7 @@ private fun DebugOutputSection(
 ) {
     if (!uiState.isVerbose && !uiState.isDebugging) return
 
-    val fontSize = 14.sp
+    val fontSize = 10.sp
     val style = monoStyle.copy(fontSize = fontSize)
     Spacer(modifier = Modifier.height(4.dp))
     HorizontalDivider(
