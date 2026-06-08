@@ -1,7 +1,7 @@
 # KMP Migration Plan — iperf3 Network Tester
 
 **Author**: Research study at Boston University (METCS683)
-**Date**: 2026-06-05
+**Date**: 2026-06-05 (updated 2026-06-08 to include tvOS)
 **Status**: Planning / Analysis
 
 ---
@@ -24,13 +24,21 @@ Both projects share identical domain logic (parameters, output parsing, unit con
 ### iOS (`iperf3iOS/`)
 | Aspect | Detail |
 |---|---|
-| UI | SwiftUI (331-line `ContentView`) |
+| UI | SwiftUI (531-line `ContentView`, platform-conditional: tvOS + iOS) |
 | Architecture | `ObservableObject` + `@Published` + Combine |
-| Native | iperf3 3.21+ compiled via Xcode -> `libiperf3lib.a` (static) |
+| Native | iperf3 3.21+ compiled via Xcode -> `libiperf3.xcframework` (4 slices) |
 | Bridge | C file + bridging header -> Swift wrapper on `Thread` |
 | Output parsing | `Iperf3OutputMonitor.swift` - mirrors Android parser |
 | Unit conversion | `UnitConverter.swift` - mirrors Android converter |
-| Known issues | Hardcoded absolute paths; no real cancellation; async bugs |
+| tvOS support | `TVRadioGroup` (Button-based radio rows); `#if os(iOS)` guards for `UIKeyboardType`/`UIColor` |
+| Known issues | No real cancellation; async bugs; tvOS deployment target 17.0 |
+
+### tvOS (`iperf3iOS/`)
+| Aspect | Detail |
+|---|---|
+| UI | tvOS layout: two-panel (`tvControlPanel` + `tvOutputPanel`) side by side, `Form` + `ScrollView` |
+| Deployment target | tvOS 17.0 (same as iOS, driven by `onChange(of:initial:_:)`) |
+| Known issues | `Picker` has no persistent selection indicator on tvOS; `TVRadioGroup` workaround needed |
 
 ---
 
@@ -38,33 +46,33 @@ Both projects share identical domain logic (parameters, output parsing, unit con
 
 ### Shareable (~60-70% of domain logic)
 
-| Module | Android Code | iOS Code | KMP Approach |
+| Module | Android Code | iOS/tvOS Code | KMP Approach |
 |---|---|---|---|
 | **IPERF PARAMETERS** | `Iperf3Parameters.kt` (8 fields) | `Iperf3Config` struct (same 8 fields) | Share `data class Iperf3Parameters` in `commonMain` |
-| **OUTPUT PARSING** | `Iperf3OutputMonitor.kt` (300 lines) | `Iperf3OutputMonitor.swift` (~same logic) | Share parser logic in `commonMain`; pure string processing, no platform deps |
-| **UNIT CONVERSION** | `UnitConverter.kt` (92 lines) | `UnitConverter.swift` (~same logic) | Share `UnitConvertedData`, `toHumanUnit()`, `fromHumanUnit()`, `toMbs()` in `commonMain` |
-| **TEST ORCHESTRATION** | `IperfTestManage.kt` (218 lines) | `Iperf3TestRunner.swift` (similar flow) | Share arg building, validation, progress tracking in `commonMain`; abstract the native call |
+| **OUTPUT PARSING** | `Iperf3OutputMonitor.kt` (300 lines) | `Iperf3OutputMonitor.swift` (~same logic, shared between iOS + tvOS) | Share parser logic in `commonMain`; pure string processing, no platform deps |
+| **UNIT CONVERSION** | `UnitConverter.kt` (92 lines) | `UnitConverter.swift` (~same logic, shared between iOS + tvOS) | Share `UnitConvertedData`, `toHumanUnit()`, `fromHumanUnit()`, `toMbs()` in `commonMain` |
+| **TEST ORCHESTRATION** | `IperfTestManage.kt` (218 lines) | `Iperf3TestRunner.swift` (similar flow, shared between iOS + tvOS) | Share arg building, validation, progress tracking in `commonMain`; abstract the native call |
 | **MODEL TYPES** | `Iperf3ResultsData.kt` (unused) | N/A | Remove unused; consolidate into shared types |
 
 ### NOT Shareable (Platform-Specific)
 
-| Component | Android | iOS | Notes |
+| Component | Android | iOS / tvOS | Notes |
 |---|---|---|---|
-| **UI Layer** | Jetpack Compose (836 lines) | SwiftUI (331 lines) | Compose Multiplatform for iOS exists but SwiftUI is the native path |
-| **Native Bridge** | JNI via CMake (`libcellularlab.so`) | Bridging header + static lib (`libiperf3lib.a`) | KMP handles both via expect/actual or native compilation |
+| **UI Layer** | Jetpack Compose (836 lines) | SwiftUI (531 lines, `#if os(tvOS)` / `#else` conditional) | Compose Multiplatform for iOS/tvOS exists but SwiftUI is the native path |
+| **Native Bridge** | JNI via CMake (`libcellularlab.so`) | Bridging header + XCFramework (4 slices) | KMP handles both via expect/actual or native compilation |
 | **Dependency Injection** | Hilt (`@HiltViewModel`) | None (plain Swift) | KMP does not provide DI; use Koin for multiplatform |
 | **State Management** | `StateFlow<UiData>` (24 fields) | `ObservableObject` + `@Published` | Share data models; keep state management platform-specific |
 | **Permissions/Manifest** | `INTERNET` in `AndroidManifest.xml` | No entitlements needed | Platform-specific setup |
 
 ### Key Insight: The C Code Is the Shared Foundation
 
-The iperf3 C source is identical across both platforms. This is the single biggest enabler for KMP:
+The iperf3 C source is identical across all three platforms. This is the single biggest enabler for KMP:
 
 1. **Android**: CMake compiles iperf3 3.19 + JNI bridge -> `libcellularlab.so`
-2. **iOS**: Xcode compiles iperf3 3.21+ -> `libiperf3lib.a`
-3. **KMP**: Kotlin/Native compiles the SAME C source -> platform-native library for both Android and iOS
+2. **iOS/tvOS**: Xcode compiles iperf3 3.21+ -> `libiperf3.xcframework` (4 slices: iOS/tvOS device+sim)
+3. **KMP**: Kotlin/Native compiles the SAME C source -> platform-native library for Android, iOS, and tvOS
 
-**One copy of iperf3 source, one compilation, shared across both platforms.**
+**One copy of iperf3 source, one compilation, shared across all three platforms.**
 
 ---
 
@@ -248,25 +256,27 @@ Compose Multiplatform now supports iOS. This would let you share the UI layer to
 | Callback to UI | Java interface -> ViewModel | Kotlin suspend function -> StateFlow |
 | Maintenance | Separate JNI layer | One FFI layer, shared with iOS |
 
-### iOS Swift Interop
+### iOS/tvOS Swift Interop
 
 Kotlin/Native produces an Objective-C header that Swift can import:
 
-1. `shared` module compiles to `iperf3shared.framework`
-2. Xcode links the framework (like it currently links `libiperf3lib.a`)
+1. `shared` module compiles to `iperf3shared.framework` (works for both iOS and tvOS targets)
+2. Xcode links the framework (like it currently links `libiperf3.xcframework` with 4 slices)
 3. Swift imports the generated ObjC header
 4. Kotlin `expect/actual` callbacks map to Swift closures
-5. Kotlin coroutines on iOS map to `DispatchQueue.main.async` for UI updates
+5. Kotlin coroutines on iOS/tvOS map to `DispatchQueue.main.async` for UI updates
+6. tvOS-specific UI code (`#if os(tvOS)` guards in ContentView) stays in the iOS app; shared module has no platform UI logic
 
 ### C Code Compatibility
 
 The iperf3 C source uses:
 - C11 standard (already declared in both Android CMake and iOS build)
-- POSIX threads (`pthread.h`) - available on both Android and iOS
-- POSIX pipes (`unistd.h`, `fcntl.h`) - available on both
-- `dup2()`, `read()`, `write()` - POSIX, works on both
+- POSIX threads (`pthread.h`) - available on Android, iOS, and tvOS
+- POSIX pipes (`unistd.h`, `fcntl.h`) - available on all three platforms
+- `dup2()`, `read()`, `write()` - POSIX, works on all three
 - `cJSON` (bundled) - pure C, no platform deps
-- `arpa/inet.h`, `sys/socket.h` - POSIX sockets, available on both
+- `arpa/inet.h`, `sys/socket.h` - POSIX sockets, available on all three
+- Note: `daemon()` is unavailable on tvOS — use `make -C src libiperf.la` (not `make all`) when rebuilding
 
 The only C code that needs platform adaptation is the bridge file (`iperf_jni.c` -> `iperf_kotlin.c`). Everything else is pure portable C.
 
@@ -291,7 +301,7 @@ The only C code that needs platform adaptation is the bridge file (`iperf_jni.c`
 |---|---|---|---|---|
 | Option A: Native-First KMP | ~60-70% | High | 7-8 weeks | Research with long-term multiplatform goals |
 | Option B: Shared Logic Only | ~30-40% | Medium | 3-4 weeks | Quick win, less risk |
-| Option C: Compose Multiplatform | ~80% | Very High | 12+ weeks | Full UI sharing, future-proof |
+| Option C: Compose Multiplatform | ~80% | Very High | 12+ weeks | Full UI sharing, future-proof (supports Android + iOS + tvOS) |
 
 ---
 
@@ -345,15 +355,15 @@ The only C code that needs platform adaptation is the bridge file (`iperf_jni.c`
 
 ## 10. Key Questions for the Professor
 
-1. **Research scope:** Is the goal to demonstrate KMP feasibility, or to produce a production-ready dual-platform app? This affects how much polish vs. proof-of-concept is needed.
+1. **Research scope:** Is the goal to demonstrate KMP feasibility, or to produce a production-ready multi-platform app? This affects how much polish vs. proof-of-concept is needed.
 
 2. **Timeline:** What is the target completion date? Phase 1 (POC) can be validated in 1-2 weeks; full migration is 7-8 weeks.
 
-3. **UI sharing:** Is Compose Multiplatform for iOS in scope, or is the goal to share only the logic layer (keep SwiftUI + Compose)?
+3. **UI sharing:** Is Compose Multiplatform for iOS/tvOS in scope, or is the goal to share only the logic layer (keep SwiftUI + Compose)?
 
-4. **iperf3 version:** Should we unify on 3.21+ (iOS) or 3.19 (Android)? 3.21+ is preferred for bug fixes.
+4. **iperf3 version:** Should we unify on 3.21+ (iOS/tvOS) or 3.19 (Android)? 3.21+ is preferred for bug fixes. Note: tvOS cannot build `main.c` (daemon() unavailable) — must use `make -C src libiperf.la`.
 
-5. **Evaluation criteria:** How will success be measured? Code line reduction? Build time? Feature parity?
+5. **Evaluation criteria:** How will success be measured? Code line reduction? Build time? Feature parity across all 3 platforms (Android, iOS, tvOS)?
 
 ---
 
@@ -363,9 +373,10 @@ The only C code that needs platform adaptation is the bridge file (`iperf_jni.c`
 |---|---|---|---|
 | C source files | ~50 (duplicated in 2 locations) | ~50 (single location) | -50% duplication |
 | Kotlin source lines | ~1,500 | ~1,000 shared + ~500 platform | -33% total, +67% shared |
-| Swift source lines | ~400 | ~250 (UI only) | -38% |
+| Swift source lines | ~530 (iOS + tvOS combined) | ~250 (UI only) | -53% |
 | Native bridge files | 2 (iperf_jni.c + Iperf3Runner.c) | 1 (iperf_kotlin.c) | -50% |
 | C build configs | 2 (CMakeLists.txt + Xcode project) | 1 (shared CMakeLists.txt) | -50% |
-| Total lines of code | ~2,500 | ~2,200 | -12% (dedup) |
+| XCFramework slices | 4 (iOS/tvOS device+sim) | 4 (generated by KMP) | -0% (same count, but auto-generated) |
+| Total lines of code | ~2,700 | ~2,200 | -19% (dedup) |
 
-The real value is not line count reduction but **single source of truth**: one parser, one unit converter, one orchestrator, one iperf3 build.
+The real value is not line count reduction but **single source of truth**: one parser, one unit converter, one orchestrator, one iperf3 build — serving Android, iOS, and tvOS.
