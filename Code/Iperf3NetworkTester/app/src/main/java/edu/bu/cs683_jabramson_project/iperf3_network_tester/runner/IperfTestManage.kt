@@ -5,7 +5,6 @@ import android.content.Context
 import android.util.Log
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.model.Iperf3Parameters
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Iperf3OutputMonitor
-import edu.bu.cs683_jabramson_project.iperf3_network_tester.view.progressColors
 
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -132,6 +131,8 @@ class IperfTestManage(
         iperf3OutputMonitor.reset()
         iperf3OutputMonitor.setParallel(parallelStreams)
         updateProgress(0.toFloat())
+
+
 
         /**
          * 5. Create a coroutine exception handler for uncaught exceptions

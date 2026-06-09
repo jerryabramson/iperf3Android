@@ -45,7 +45,7 @@ fun UploadDownload(
             ) {
                 Text(
                     text = text,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     color = color
                 )
             }

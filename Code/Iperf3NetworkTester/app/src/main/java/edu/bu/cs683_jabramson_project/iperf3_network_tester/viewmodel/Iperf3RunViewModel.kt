@@ -15,8 +15,10 @@ import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Iperf3OutputMo
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getAverage
 
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getMaximum
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getMedian
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getMinimum
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getSampleSize
+import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.getStandardDeviation
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.printLineResult
 
 
@@ -351,10 +353,14 @@ class Iperf3RunViewModel @Inject constructor (
             val max = getMaximum(_uiStateFlow.value.lineResult)
             val min = getMinimum(_uiStateFlow.value.lineResult)
             val avg = getAverage(_uiStateFlow.value.lineResult)
+            val med = getMedian(_uiStateFlow.value.lineResult)
+            val std = getStandardDeviation(_uiStateFlow.value.lineResult)
             if (!exe.isEmpty()) _uiStateFlow.update { it.copy(results = it.results.also { it.add("Samples: $exe") }) }
             if (!avg.isEmpty()) _uiStateFlow.update { it.copy(results = it.results.also { it.add("Average: $avg") }) }
             if (!max.isEmpty()) _uiStateFlow.update { it.copy(results = it.results.also { it.add("Maximum: $max") }) }
             if (!min.isEmpty()) _uiStateFlow.update { it.copy(results = it.results.also { it.add("Minimum: $min") }) }
+            if (!med.isEmpty()) _uiStateFlow.update { it.copy(results = it.results.also { it.add(" Median: $med") }) }
+            if (!std.isEmpty()) _uiStateFlow.update { it.copy(results = it.results.also { it.add("Std Dev: $std") }) }
         } else {
             _uiStateFlow.update { it.copy(results = it.results.also { it.add("No Results") }) }
         }
@@ -435,6 +441,8 @@ class Iperf3RunViewModel @Inject constructor (
             )
         }
     }
+
+
 
     /**
      * User entered a new duration.

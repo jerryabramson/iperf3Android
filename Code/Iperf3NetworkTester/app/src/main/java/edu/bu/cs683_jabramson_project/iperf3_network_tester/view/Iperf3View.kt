@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation.Companion.keyboardOptions
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -41,6 +43,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -90,6 +94,7 @@ fun RunIperf3Screen(viewModel: Iperf3RunViewModel = hiltViewModel(
                     {
                         Text(stringResource(id = R.string.app_name),
                             style = MaterialTheme.typography.titleLarge,
+                            textAlign = TextAlign.Left,
                             modifier = Modifier.padding(start =10.dp,top = 5.dp,bottom = 5.dp))
                     }
                 },
@@ -106,7 +111,7 @@ fun RunIperf3Screen(viewModel: Iperf3RunViewModel = hiltViewModel(
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+        Column(modifier = Modifier.padding(padding).fillMaxSize().padding(start = 10.dp, end = 10.dp)) {
 
             /* Input rows */
             HostInputRow(uiState, viewModel, fieldColors, monoStyle)
@@ -257,21 +262,25 @@ private fun HostInputRow(
                 placeholder = {
                     Text(
                         DefaultUIValues.HOST_NAME,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.tertiary
                     )
                 },
-                modifier = Modifier.width(width = 150.dp).height(height = 50.dp)
+                modifier = Modifier.width(width = 200.dp).height(height = 50.dp)
                     .padding(end = 2.dp),
                 label = {
                     Text(
                         "iPerf3 Server[:port]",
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 },
                 colors = colors,
                 singleLine = true,
-                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { viewModel.launch() })
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { viewModel.launch() }),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Uri,
+                    imeAction = ImeAction.Done
+                )
             )
             GenericNumericField(
                 value = uiState.durationSecs,
@@ -339,13 +348,13 @@ fun GenericNumericField(
         onValueChange = onValueChange,
         enabled = enabled,
         placeholder = {
-            Text(placeholder, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
+            Text(placeholder, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
         },
         modifier = modifier,
         label = {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
             )
         },
         colors = colors,
@@ -374,21 +383,23 @@ private fun ResultsRow(
         var thick  = if (uiState.returnCode != 0) 5.dp else 2.dp
         val resultColor = if (uiState.returnCode != 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
 
-        Spacer(modifier = Modifier.height(4.dp))
-        HorizontalDivider(
-            modifier = Modifier.fillMaxWidth(),
-            thickness = thick,
-            color = MaterialTheme.colorScheme.tertiary
-        )
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            items(uiState.results.size) { index ->
-                Text(
-                    text = uiState.results[index],
-                    style = monoStyle.copy(fontSize = 16.sp),
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Left,
-                    color = resultColor
-                )
+        if (!uiState.results.isEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth(),
+                thickness = thick,
+                color = MaterialTheme.colorScheme.tertiary
+            )
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                items(uiState.results.size) { index ->
+                    Text(
+                        text = uiState.results[index],
+                        style = monoStyle.copy(fontSize = 16.sp),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Left,
+                        color = resultColor
+                    )
+                }
             }
         }
     }
@@ -480,6 +491,8 @@ fun BandwidthDisplay(uiState: edu.bu.cs683_jabramson_project.iperf3_network_test
         var max = uiState.lineResult.currentMax
         var min = uiState.lineResult.currentMin
         var avg = uiState.lineResult.currentAvg
+        val med = uiState.lineResult.currentMedian
+        val std = uiState.lineResult.currentStandardDeviation
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 2.dp, end = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -488,6 +501,11 @@ fun BandwidthDisplay(uiState: edu.bu.cs683_jabramson_project.iperf3_network_test
                 text = "Min",
                 color = MaterialTheme.colorScheme.secondary,
                 style = MaterialTheme.typography.labelMedium,
+            )
+            Text(
+                text = "Mean",
+                color = MaterialTheme.colorScheme.secondary,
+                style = MaterialTheme.typography.labelMedium
             )
             Text(
                 text = "Avg",
@@ -509,6 +527,11 @@ fun BandwidthDisplay(uiState: edu.bu.cs683_jabramson_project.iperf3_network_test
                 text = toWholeNumber(min).trim(),
                 color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text = toWholeNumber(med),
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.bodyMedium
             )
             Text(
                 text = toWholeNumber(avg),
@@ -615,7 +638,7 @@ private fun DebugOutputSection(
 ) {
     if (!uiState.isVerbose && !uiState.isDebugging) return
 
-    val fontSize = 10.sp
+    val fontSize = 14.sp
     val style = monoStyle.copy(fontSize = fontSize)
     Spacer(modifier = Modifier.height(4.dp))
     HorizontalDivider(
@@ -644,7 +667,7 @@ private fun DebugOutputSection(
 
     LazyColumn(modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp)) {
         items(uiState.outputLines.size) { index ->
-            DebugOutputItem(uiState.outputLines[index], style)
+            DebugOutputItem(uiState.outputLines[uiState.outputLines.size - index - 1], style)
         }
     }
 }

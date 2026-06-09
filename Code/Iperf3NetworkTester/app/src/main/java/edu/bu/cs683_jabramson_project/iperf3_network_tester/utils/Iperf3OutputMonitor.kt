@@ -3,6 +3,8 @@ package edu.bu.cs683_jabramson_project.iperf3_network_tester.utils
 import android.annotation.SuppressLint
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.utils.Units.ZERO_VALUE_STRING
 import java.util.Locale
+import kotlin.math.sqrt
+import kotlin.text.format
 
 
 /**
@@ -28,9 +30,12 @@ class Iperf3OutputMonitor {
         var currentMax: UnitConvertedData = UnitConvertedData(),
         var currentMin: UnitConvertedData = UnitConvertedData(),
         var currentAvg: UnitConvertedData = UnitConvertedData(),
+        var currentMedian: UnitConvertedData = UnitConvertedData(),
+        var currentStandardDeviation: UnitConvertedData = UnitConvertedData(),
 
         // processed output from iperf3
         var basicBandWidthString: String = "",
+        var debugFormattedOutputLine: String = "",
         var formattedOutputLine: String = "",
         var connectedString: String = "",
         var timeout: String = "",
@@ -41,8 +46,10 @@ class Iperf3OutputMonitor {
         // statistics - raw numeric values
         var maxRawBitsPerSec: Double = Double.MIN_VALUE,
         var minRawBitsPerSec: Double = Double.MAX_VALUE,
-        var avgRawBitsPerSec: Double = 0.0,
-        var currentRawBitsPerSec: Double = 0.0,
+        var avgRawBitsPerSec: Double = (-1).toDouble(),
+        var medianRawBitsPerSec: Double = (-1).toDouble(),
+        var currentRawBitsPerSec: Double = (-1).toDouble(),
+        var standardDeviationRawBitsPerSec: Double = (-1).toDouble(),
 
         // connection details
         var localHost: String = "",
@@ -115,8 +122,10 @@ class Iperf3OutputMonitor {
                         currentLineResult.remotePort = restOfLine[9].toLongOrNull() ?: -1L
                         currentLineResult.connectedString = restOfLine[5]
                         currentLineResult.timeout = restOfLine[6]
-                        currentLineResult.messages.add(" Local Host:port ${currentLineResult.localHost}:${currentLineResult.localPort}")
-                        currentLineResult.messages.add("Remote Host:port ${currentLineResult.remoteHost}:${currentLineResult.remotePort}")
+                        val localHostPort = "%18s:%04d".format(currentLineResult.localHost, currentLineResult.localPort)
+                        val remoteHostPort = "%18s:%04d".format(currentLineResult.remoteHost, currentLineResult.remotePort)
+                        currentLineResult.messages.add(" Local Host:port $localHostPort")
+                        currentLineResult.messages.add("Remote Host:port $remoteHostPort")
                         gathered = true
                     }
                 } else {
@@ -176,8 +185,10 @@ class Iperf3OutputMonitor {
                                     lastOmitted = false
                                     historicalResults.add(fromHumanUnit(currentLineResult.currentBandWidth.value, currentLineResult.currentBandWidth.unit))
                                     updateRunningAverage(historicalResults)
+                                    updateRunningMedian(historicalResults)
                                     updateMax(bitRateValue, bitRateUnitString)
                                     updateMin(bitRateValue, bitRateUnitString)
+                                    updateRunningDeviation(historicalResults)
                                     currentLineResult.totalSamples++
                                     timeLabel =
                                         if (!isSingleThread) String.format("%2d %s", parallel, "streams")
@@ -187,14 +198,21 @@ class Iperf3OutputMonitor {
                             }
                             currentLineResult.intervalNumber = intervalLong
                             currentLineResult.formattedOutputLine =
-                                String.format("%10.10s %-10.10s %4.4s %-9.9s %7.7s %7.7s %7.7s",
-                                    timeLabel,
+                                String.format("%-12.12s %4.4s %-9.9s %10.10s",
+                                    intervalString,
+                                    bitRateString.trim(),
+                                    bitRateUnitString,
+                                    timeLabel)
+                            currentLineResult.debugFormattedOutputLine =
+                                String.format("%-12.12s %4.4s %-9.9s %7.7s %7.7s %7.7s %10.10s",
                                     intervalString,
                                     bitRateString.trim(),
                                     bitRateUnitString,
                                     toMbs(currentLineResult.avgRawBitsPerSec),
                                     toMbs(currentLineResult.minRawBitsPerSec),
-                                    toMbs(currentLineResult.maxRawBitsPerSec))
+                                    toMbs(currentLineResult.maxRawBitsPerSec),
+                                    timeLabel)
+
 
 
                         }
@@ -226,6 +244,7 @@ class Iperf3OutputMonitor {
     }
 
     private fun updateRunningAverage(historicalResults: List<Double>) {
+        if (historicalResults.isEmpty()) return
         var sum = 0.0
         for (i in historicalResults.indices) {
             sum += historicalResults[i]
@@ -233,34 +252,76 @@ class Iperf3OutputMonitor {
         currentLineResult.currentAvg = toHumanUnit(sum / historicalResults.size)
         currentLineResult.avgRawBitsPerSec = sum / historicalResults.size
     }
+
+    private fun updateRunningMedian(historicalResults: List<Double>) {
+        var median = 0.0
+        if (historicalResults.isEmpty()) return
+        val mid = historicalResults.size / 2
+        if (historicalResults.size % 2 == 0) {
+            median = (historicalResults[mid - 1] + historicalResults[mid]) / 2.0
+        } else {
+            median = historicalResults[mid]
+        }
+        currentLineResult.currentMedian = toHumanUnit(median)
+        currentLineResult.medianRawBitsPerSec = median
+    }
+
+    fun updateRunningDeviation(historicalResults: List<Double>) {
+        val mean = historicalResults.average()
+        val variance = historicalResults.map { (it - mean) * (it - mean) }.average()
+        val stdDev = sqrt(variance)
+        currentLineResult.currentStandardDeviation = toHumanUnit(stdDev)
+        currentLineResult.standardDeviationRawBitsPerSec = stdDev
+    }
+
     fun getCurrentLineResult() = currentLineResult
 }
 
-fun getHeading(): String {
-    val heading = "%10.10s %-10.10s %4.4s %-9.9s %7.7s %7.7s %7.7s".format(
-        "comment",
+fun getDebugHeading(): String {
+    val heading = "%-12.12s %4.4s %-9.9s %7.7s %7.7s %7.7s %10.10s".format(
         "Interval",
         "rate",
         "Unit",
         "Avg",
         "Min",
-        "Max"
+        "Max",
+        "comment",
+
     )
     return heading
 }
 
-fun getHeadingUL(): String {
-    val ul = "%10.10s %-10.10s %4.4s %-9.9s %7.7s %7.7s %7.7s".format(
-        "----------",
-        "---------",
+fun getDebugHeadingUL(): String {
+    val ul = "%-12.12s %4.4s %-9.9s %7.7s %7.7s %7.7s %10.10s".format(
+        "------------",
         "----",
         "---------",
         "-------",
         "-------",
-        "-------"
+        "-------",
+        "----------",
+        )
+    return ul
+}
 
+fun getHeading(): String {
+    val heading = "%-12.12s %4.4s %-9.9s %10.10s".format(
+        "Interval",
+        "rate",
+        "Unit",
+        "comment",
 
         )
+    return heading
+}
+
+fun getHeadingUL(): String {
+    val ul = "%-12.12s %4.4s %-9.9s %10.10s".format(
+        "------------",
+        "----",
+        "---------",
+        "----------",
+    )
     return ul
 }
 
@@ -270,6 +331,8 @@ fun getSampleSize(lineResult: Iperf3OutputMonitor.LineResult): String = if (line
 fun getMaximum(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.maxRawBitsPerSec > Double.MIN_VALUE) toWholeNumber(lineResult.currentMax) else ""
 fun getMinimum(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.minRawBitsPerSec < Double.MAX_VALUE) toWholeNumber(lineResult.currentMin) else ""
 fun getAverage(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.avgRawBitsPerSec >= 0) toWholeNumber(lineResult.currentAvg) else ""
+fun getMedian(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.medianRawBitsPerSec >= 0) toWholeNumber(lineResult.currentMedian) else ""
+fun getStandardDeviation(lineResult: Iperf3OutputMonitor.LineResult): String = if (lineResult.standardDeviationRawBitsPerSec >= 0) toWholeNumber(lineResult.currentStandardDeviation) else ""
 fun printLineResult(lineResult: Iperf3OutputMonitor.LineResult): String {
     val out = StringBuilder()
     out.append("LineResult\n ")
