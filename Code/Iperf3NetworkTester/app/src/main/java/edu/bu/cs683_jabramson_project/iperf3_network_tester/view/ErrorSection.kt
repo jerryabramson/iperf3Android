@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 
 @Preview(name = "Error Section Preview")
 @Composable
-fun ErrorSectionPreview(
+fun ErrorSection(
     uiState: edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData = sampleUiState,
     monoStyle: TextStyle = mesloMonoTextStyle()
 ) {
@@ -33,7 +33,7 @@ fun ErrorSectionPreview(
         Spacer(modifier = Modifier.height(2.dp))
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth().padding(start = 1.dp, end = 1.dp),
-            thickness = 2.dp,
+            thickness = 4.dp,
             color = MaterialTheme.colorScheme.error
         )
         LazyColumn(modifier = Modifier.fillMaxWidth().padding(start = 1.dp, end = 1.dp)) {
@@ -41,7 +41,7 @@ fun ErrorSectionPreview(
                 ErrorLineItem(uiState.errorLines[index], monoStyle)
             }
         }
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -52,8 +52,9 @@ private fun ErrorLineItem(text: String, style: TextStyle) {
             text = text,
             color = MaterialTheme.colorScheme.error,
             textAlign = TextAlign.Left,
-            style = style.copy(fontSize = 9.sp),
+            style = style.copy(fontSize = 13.sp),
             modifier = Modifier.fillMaxWidth()
         )
     }
 }
+

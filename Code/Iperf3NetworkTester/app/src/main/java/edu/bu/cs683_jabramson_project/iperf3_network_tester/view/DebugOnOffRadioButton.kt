@@ -31,92 +31,34 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.Iperf3RunViewModel
 
+@Preview(name ="DebugOnOffRadioButtonPreview")
 @Composable
 fun DebugOnOffRadioButton(
-    uiState: edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData,
-    viewModel: Iperf3RunViewModel
+    uiState: edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData = sampleUiState,
+    toggleDebug: () -> Unit = {}
 ) {
     val buttonColor = if (uiState.isDebugging) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
     Column(horizontalAlignment = Alignment.End) {
-        Text(text = "iperf3 Output", modifier = Modifier.padding(end = 10.dp), style = MaterialTheme.typography.bodySmall)
+        Text(text = "iperf3 Output",
+            modifier = Modifier.padding(end = 10.dp),
+            style = MaterialTheme.typography.bodySmall)
         Button(
-            onClick = { viewModel.toggleDebug() }, // 1. Flip state on click
+            onClick =  toggleDebug, // 1. Flip state on click
             colors = ButtonDefaults.buttonColors(
                 containerColor = buttonColor
             ),
-            shape = MaterialTheme.shapes.extraSmall,
+            shape = MaterialTheme.shapes.small,
             modifier = Modifier.padding(1.dp)//.width(240.dp).height(50.dp)
         ) {
             if (uiState.isDebugging) {
-                Text(text = "Turn Off", color = MaterialTheme.colorScheme.surface, style = mesloMonoTextStyle().copy(fontSize = 10.sp))
+                Text(text = "Turn Off",
+                    color = MaterialTheme.colorScheme.surface,
+                    style = MaterialTheme.typography.labelSmall)
             } else {
-                Text(text = "Turn On", color = MaterialTheme.colorScheme.surfaceVariant,  style = mesloMonoTextStyle().copy(fontSize = 10.sp))
-            }
-        }
-    }
-
-    //Column(horizontalAlignment = Alignment.Start,
-      //  modifier = Modifier.selectableGroup().padding(end=2.dp))
-    //{
-//      Spacer(modifier = Modifier.weight(1f))
-      //Text(text = "Debug", style = style, fontSize = 12.sp)
-      //  listOf("Normal", "Verbose", "Trace").forEach { text ->
-        //    SelectableOption(
-          //      selected = text == selected,
-            //    onClick = { viewModel.setDebug(text) }
-            //) {
-            //    Text(text = text, style = style, fontSize = 8.sp, color = MaterialTheme.colorScheme.tertiary)
-            //}
-      //  }
-   // }
-}
-
-@Preview(name ="DebugOnOffRadioButtonPreview")
-@Composable
-fun DebugOnOffRadioButtonPreview(isDebugging:  Boolean = true) {
-    var buttonColor = MaterialTheme.colorScheme.primary
-    Column(horizontalAlignment = Alignment.End) {
-        Text(text = "iperf3 Output", modifier = Modifier.padding(end = 10.dp), style = MaterialTheme.typography.bodySmall)
-        Button(
-            onClick = {  }, // 1. Flip state on click
-            colors = ButtonDefaults.buttonColors(
-                containerColor = buttonColor
-            ),
-            shape = MaterialTheme.shapes.extraSmall,
-            modifier = Modifier.padding(1.dp)//.width(240.dp).height(50.dp)
-        ) {
-            if (isDebugging) {
-                Text(text = "Turn Off", color = MaterialTheme.colorScheme.surface,  style = mesloMonoTextStyle().copy(fontSize = 8.sp))
-            } else {
-                Text(text = "Turn On", color = MaterialTheme.colorScheme.inverseSurface,  style = mesloMonoTextStyle().copy(fontSize = 8.sp))
+                Text(text = "Turn On",
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    style = MaterialTheme.typography.labelSmall)
             }
         }
     }
 }
-
-    @Composable
-    fun SimpleToggleSwitchPreview(isChecked: Boolean = false) {
-        // 1. Hold toggle state
-        var isToggled = isChecked
-        var buttonColor = MaterialTheme.colorScheme.primary
-        if (!isToggled) buttonColor = MaterialTheme.colorScheme.onErrorContainer
-        Row(horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-            Button(
-                onClick = { isToggled = !isToggled }, // 1. Flip state on click
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = buttonColor
-                ),
-
-                modifier = Modifier.padding(1.dp)//.width(240.dp).height(50.dp)
-            ) {
-                if (!isToggled) {
-                    Text(text = "On", color = MaterialTheme.colorScheme.surface,  style = mesloMonoTextStyle().copy(fontSize = 8.sp))
-                } else {
-                    Text(text = "Off", color = MaterialTheme.colorScheme.surface,  style = mesloMonoTextStyle().copy(fontSize = 8.sp))
-                }
-
-                //Text(text = if (isToggled) "Output" else "No Output",  style = mesloMonoTextStyle().copy(fontSize = 10.sp))
-
-            }
-        }
-    }

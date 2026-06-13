@@ -11,37 +11,31 @@ import androidx.compose.ui.unit.dp
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
-import edu.bu.cs683_jabramson_project.iperf3_network_tester.ui.theme.Iperf3NetworkTesterTheme
 
 
 @Preview(name = "Iperf Messages Section")
 @Composable
-fun IperfMessagesSectionPreview(
+fun IperfMessagesSection(
     uiState: edu.bu.cs683_jabramson_project.iperf3_network_tester.viewmodel.UiData = sampleUiState,
     monoStyle: TextStyle = mesloMonoTextStyle()
 ) {
     Column() {
 
         if (uiState.isVerbose || uiState.isDebugging || uiState.errorLines.isNotEmpty() ||
-            ((uiState.latestLine.isEmpty() && !uiState.isFinished))
-        ) {
+            ((uiState.latestLine.isEmpty() && !uiState.isFinished)))
+        {
             Spacer(modifier = Modifier.height(1.dp))
-            val defaultColor =
-                if (uiState.returnCode != 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            val defaultColor = if (uiState.returnCode != 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
             val defaultThickness = if (uiState.returnCode != 0) 4.dp else 2.dp
             HorizontalDivider(
                 modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
@@ -50,7 +44,7 @@ fun IperfMessagesSectionPreview(
             )
             LazyColumn(modifier = Modifier.fillMaxWidth()) {
                 items(uiState.iperf3Messages.size) { index ->
-                    IperfMessageItemPreview(uiState.iperf3Messages[index], monoStyle)
+                    IperfMessageItem(uiState.iperf3Messages[index], monoStyle)
                 }
             }
 
@@ -62,13 +56,8 @@ fun IperfMessagesSectionPreview(
     }
 }
 
-
-
-
-
-
 @Composable
-private fun IperfMessageItemPreview(text: String = "", style: TextStyle = mesloMonoTextStyle()) {
+private fun IperfMessageItem(text: String, style: TextStyle) {
     Row(modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp)) {
         Text(
             text = text,
@@ -78,3 +67,5 @@ private fun IperfMessageItemPreview(text: String = "", style: TextStyle = mesloM
         )
     }
 }
+
+
